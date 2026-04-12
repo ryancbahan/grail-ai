@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import { ResolveContext } from "./types";
+import { ResolveContext } from "../types";
 
 const JS_EXTENSIONS = [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"];
 

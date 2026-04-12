@@ -1,4 +1,4 @@
-import { ParsedImport } from "./types";
+import { ParsedImport } from "../types";
 
 function stripComments(source: string): string {
   // Remove single-line comments

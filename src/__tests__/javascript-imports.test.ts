@@ -1,4 +1,4 @@
-import { parseJavaScriptImports } from "../core/languages/javascript-imports";
+import { parseJavaScriptImports } from "../core/languages/javascript/imports";
 
 const parse = (content: string) => parseJavaScriptImports("test.ts", content);
 

@@ -4,7 +4,7 @@ import os from "os";
 import { buildTree } from "../core/ast/builder";
 import { buildDependencyGraph } from "../core/ast/dependencies";
 import { javascript } from "../core/languages/javascript";
-import { clearResolverCache } from "../core/languages/javascript-resolver";
+import { clearResolverCache } from "../core/languages/javascript/resolver";
 import { LanguageConfig } from "../core/languages/types";
 
 let tmpDir: string;

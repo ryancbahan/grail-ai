@@ -1,6 +1,6 @@
-import { LanguageConfig } from "./types";
-import { parseJavaScriptImports } from "./javascript-imports";
-import { resolveJavaScriptImport } from "./javascript-resolver";
+import { LanguageConfig } from "../types";
+import { parseJavaScriptImports } from "./imports";
+import { resolveJavaScriptImport } from "./resolver";
 
 export const javascript: LanguageConfig = {
   name: "javascript",

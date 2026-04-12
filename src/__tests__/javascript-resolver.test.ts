@@ -4,7 +4,7 @@ import os from "os";
 import {
   resolveJavaScriptImport,
   clearResolverCache,
-} from "../core/languages/javascript-resolver";
+} from "../core/languages/javascript/resolver";
 import { ResolveContext } from "../core/languages/types";
 
 let tmpDir: string;
