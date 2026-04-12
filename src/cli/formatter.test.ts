@@ -2,7 +2,7 @@ import { formatTree, formatDependencyGraph } from "./formatter";
 import type { ASTNode, DirectoryNode, FileNode, RootNode, Import } from "../core/ast/types";
 
 function file(name: string, extension: string | null = null, imports: Import[] = []): FileNode {
-  return { type: "file", name, extension, imports };
+  return { type: "file", name, extension, imports, symbols: [] };
 }
 
 function dir(name: string, children: ASTNode[] = []): DirectoryNode {
@@ -10,7 +10,7 @@ function dir(name: string, children: ASTNode[] = []): DirectoryNode {
 }
 
 function imp(specifier: string, resolvedPath: string | null, isExternal = false): Import {
-  return { specifier, kind: "static", resolvedPath, isExternal };
+  return { specifier, kind: "static", resolvedPath, isExternal, symbols: [] };
 }
 
 function makeRoot(tree: DirectoryNode, externals: string[] = []): RootNode {

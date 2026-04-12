@@ -16,5 +16,9 @@ export type {
   RootNode,
   TreeOptions,
   Import,
+  ImportedSymbol,
+  Symbol,
+  SymbolKind,
+  SymbolVisibility,
   FileEntry,
 } from "./types";

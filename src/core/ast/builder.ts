@@ -20,7 +20,7 @@ function buildNode(dirPath: string, ignored: Set<string>): ASTNode {
 
   if (!stat.isDirectory()) {
     const ext = path.extname(name);
-    return { name, type: "file", extension: ext || null, imports: [] };
+    return { name, type: "file", extension: ext || null, imports: [], symbols: [] };
   }
 
   const entries = fs.readdirSync(dirPath).sort();

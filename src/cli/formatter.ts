@@ -1,7 +1,21 @@
 import path from "path";
-import { ASTNode, RootNode } from "../core/ast/types";
+import { ASTNode, FileNode, Symbol, SymbolKind, RootNode } from "../core/ast/types";
 import { collectFiles } from "../core/ast/walker";
 import { findCircularDependencies } from "../core/ast/queries";
+
+const KIND_PREFIX: Record<SymbolKind, string> = {
+  function: "fn",
+  method: "method",
+  class: "class",
+  variable: "const",
+  type: "type",
+  interface: "interface",
+  enum: "enum",
+  module: "module",
+  trait: "trait",
+  default: "default",
+  unknown: "",
+};
 
 export function formatTree(tree: ASTNode): string {
   const lines: string[] = [];
@@ -50,12 +64,15 @@ export function formatDependencyGraph(root: RootNode): string {
     node.imports.forEach((imp, i) => {
       const isLast = i === node.imports.length - 1;
       const connector = isLast ? "└── " : "├── ";
+      const symbolNames = imp.symbols.length > 0
+        ? ` { ${imp.symbols.map((s) => s.originalName === s.name ? s.name : `${s.originalName} as ${s.name}`).join(", ")} }`
+        : "";
       if (imp.isExternal) {
-        lines.push(`  ${connector}${imp.specifier} (external)`);
+        lines.push(`  ${connector}${imp.specifier}${symbolNames} (external)`);
       } else if (imp.resolvedPath) {
-        lines.push(`  ${connector}${imp.specifier} → ${rel(imp.resolvedPath)}`);
+        lines.push(`  ${connector}${imp.specifier}${symbolNames} → ${rel(imp.resolvedPath)}`);
       } else {
-        lines.push(`  ${connector}${imp.specifier} (unresolved)`);
+        lines.push(`  ${connector}${imp.specifier}${symbolNames} (unresolved)`);
       }
     });
   }
@@ -75,4 +92,35 @@ export function formatDependencyGraph(root: RootNode): string {
   }
 
   return lines.join("\n");
+}
+
+export function formatFileSummary(node: FileNode): string {
+  const parts: string[] = [];
+
+  if (node.symbols.length > 0) {
+    const publicSymbols = node.symbols.filter((s) => s.visibility === "public" && !s.parent);
+    if (publicSymbols.length > 0) {
+      const grouped = publicSymbols
+        .map((s) => {
+          const prefix = KIND_PREFIX[s.kind];
+          return prefix ? `${prefix} ${s.name}` : s.name;
+        })
+        .join(", ");
+      parts.push(`exports: ${grouped}`);
+    }
+  }
+
+  const localDeps = node.imports.filter((i) => !i.isExternal).length;
+  const extDeps = [...new Set(node.imports.filter((i) => i.isExternal).map((i) => i.specifier))];
+
+  if (localDeps > 0 || extDeps.length > 0) {
+    const segments: string[] = [];
+    if (localDeps > 0) segments.push(`${localDeps} dep${localDeps !== 1 ? "s" : ""}`);
+    if (extDeps.length > 0) {
+      segments.push(`${extDeps.length} ext (${extDeps.join(", ")})`);
+    }
+    parts.push(segments.join(", "));
+  }
+
+  return parts.join(" | ");
 }

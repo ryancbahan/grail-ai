@@ -1,16 +1,19 @@
 import { LanguageConfig } from "../types";
 import { parseJavaScriptImports } from "./imports";
+import { parseJavaScriptSymbols } from "./symbols";
 import { resolveJavaScriptImport } from "./resolver";
-import { initJavaScriptParsers } from "./parser";
-
-export { initJavaScriptParsers } from "./parser";
 
 export const javascript: LanguageConfig = {
   name: "javascript",
   extensions: [".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs"],
   markers: ["package.json"],
-  init: initJavaScriptParsers,
+  grammars: [
+    { extensions: [".js", ".jsx", ".mjs", ".cjs"], grammarPackage: "tree-sitter-javascript", wasmFile: "tree-sitter-javascript.wasm" },
+    { extensions: [".ts", ".mts", ".cts"], grammarPackage: "tree-sitter-typescript", wasmFile: "tree-sitter-typescript.wasm" },
+    { extensions: [".tsx"], grammarPackage: "tree-sitter-typescript", wasmFile: "tree-sitter-tsx.wasm" },
+  ],
   parseImports: parseJavaScriptImports,
+  parseSymbols: parseJavaScriptSymbols,
   resolveImport: resolveJavaScriptImport,
   treeOptions: {
     ignorePaths: [

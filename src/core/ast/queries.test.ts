@@ -13,7 +13,7 @@ function imp(
   resolvedPath: string | null,
   isExternal = false
 ): Import {
-  return { specifier, kind: "static", resolvedPath, isExternal };
+  return { specifier, kind: "static", resolvedPath, isExternal, symbols: [] };
 }
 
 function makeRoot(
@@ -32,6 +32,7 @@ function makeRoot(
         name: f.name,
         extension: ".ts",
         imports: f.imports,
+        symbols: [],
       })),
     },
   };

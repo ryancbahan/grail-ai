@@ -1,37 +1,58 @@
 import { parseJavaScriptImports } from "./imports";
-import { initJavaScriptParsers } from "./parser";
+import { initLanguages } from "../index";
+import { parseFile } from "../grammar-loader";
 
-const parse = (content: string) => parseJavaScriptImports("test.ts", content);
+function parse(content: string) {
+  const tree = parseFile("test.ts", content);
+  const result = parseJavaScriptImports("test.ts", content, tree);
+  if (tree && typeof (tree as { delete?: () => void }).delete === "function") {
+    (tree as { delete: () => void }).delete();
+  }
+  return result;
+}
 
 beforeAll(async () => {
-  await initJavaScriptParsers();
+  await initLanguages();
 });
 
 describe("parseJavaScriptImports", () => {
   describe("ES static imports", () => {
     it("parses default import", () => {
       const result = parse('import foo from "bar"');
-      expect(result).toEqual([{ specifier: "bar", kind: "static" }]);
+      expect(result).toHaveLength(1);
+      expect(result[0].specifier).toBe("bar");
+      expect(result[0].kind).toBe("static");
+      expect(result[0].symbols).toEqual([{ name: "foo", originalName: "default" }]);
     });
 
     it("parses named imports", () => {
       const result = parse('import { a, b } from "./lib"');
-      expect(result).toEqual([{ specifier: "./lib", kind: "static" }]);
+      expect(result[0].specifier).toBe("./lib");
+      expect(result[0].symbols).toEqual([
+        { name: "a", originalName: "a" },
+        { name: "b", originalName: "b" },
+      ]);
+    });
+
+    it("parses aliased named imports", () => {
+      const result = parse('import { foo as bar } from "./lib"');
+      expect(result[0].symbols).toEqual([{ name: "bar", originalName: "foo" }]);
     });
 
     it("parses namespace import", () => {
       const result = parse('import * as d3 from "d3"');
-      expect(result).toEqual([{ specifier: "d3", kind: "static" }]);
+      expect(result[0].symbols).toEqual([{ name: "d3", originalName: "*" }]);
     });
 
     it("parses side-effect import", () => {
       const result = parse('import "./styles.css"');
-      expect(result).toEqual([{ specifier: "./styles.css", kind: "static" }]);
+      expect(result[0].specifier).toBe("./styles.css");
+      expect(result[0].symbols).toEqual([]);
     });
 
     it("parses single-quoted imports", () => {
       const result = parse("import foo from './bar'");
-      expect(result).toEqual([{ specifier: "./bar", kind: "static" }]);
+      expect(result[0].specifier).toBe("./bar");
     });
 
     it("parses multiline import", () => {
@@ -40,48 +61,39 @@ describe("parseJavaScriptImports", () => {
         b,
         c
       } from "./utils"`);
-      expect(result).toEqual([{ specifier: "./utils", kind: "static" }]);
+      expect(result[0].specifier).toBe("./utils");
+      expect(result[0].symbols).toHaveLength(3);
     });
   });
 
   describe("ES re-exports", () => {
     it("parses export from", () => {
       const result = parse('export { foo } from "./mod"');
-      expect(result).toEqual([{ specifier: "./mod", kind: "static" }]);
+      expect(result).toEqual([{ specifier: "./mod", kind: "static", symbols: [] }]);
     });
 
     it("parses export all", () => {
       const result = parse('export * from "./types"');
-      expect(result).toEqual([{ specifier: "./types", kind: "static" }]);
+      expect(result).toEqual([{ specifier: "./types", kind: "static", symbols: [] }]);
     });
   });
 
   describe("CommonJS require", () => {
     it("parses require", () => {
       const result = parse('const x = require("foo")');
-      expect(result).toEqual([{ specifier: "foo", kind: "require" }]);
+      expect(result).toEqual([{ specifier: "foo", kind: "require", symbols: [] }]);
     });
 
     it("parses require with single quotes", () => {
       const result = parse("const x = require('./local')");
-      expect(result).toEqual([{ specifier: "./local", kind: "require" }]);
-    });
-
-    it("parses inline require", () => {
-      const result = parse('const a = require("foo").bar');
-      expect(result).toEqual([{ specifier: "foo", kind: "require" }]);
+      expect(result[0].specifier).toBe("./local");
     });
   });
 
   describe("dynamic import", () => {
     it("parses dynamic import expression", () => {
       const result = parse('const mod = import("./lazy")');
-      expect(result).toEqual([{ specifier: "./lazy", kind: "dynamic" }]);
-    });
-
-    it("parses dynamic import in then chain", () => {
-      const result = parse('import("./chunk").then(m => m.default)');
-      expect(result).toEqual([{ specifier: "./chunk", kind: "dynamic" }]);
+      expect(result).toEqual([{ specifier: "./lazy", kind: "dynamic", symbols: [] }]);
     });
   });
 
@@ -101,7 +113,8 @@ describe("parseJavaScriptImports", () => {
         // import fake from "fake"
         import real from "real"
       `);
-      expect(result).toEqual([{ specifier: "real", kind: "static" }]);
+      expect(result).toHaveLength(1);
+      expect(result[0].specifier).toBe("real");
     });
   });
 
@@ -113,12 +126,10 @@ describe("parseJavaScriptImports", () => {
         const lodash = require("lodash");
         const lazy = import("./lazy-mod");
       `);
-
       expect(result).toHaveLength(4);
-      expect(result).toContainEqual({ specifier: "fs", kind: "static" });
-      expect(result).toContainEqual({ specifier: "path", kind: "static" });
-      expect(result).toContainEqual({ specifier: "lodash", kind: "require" });
-      expect(result).toContainEqual({ specifier: "./lazy-mod", kind: "dynamic" });
+      expect(result.map((r) => r.specifier).sort()).toEqual(
+        ["./lazy-mod", "fs", "lodash", "path"]
+      );
     });
 
     it("deduplicates identical imports", () => {

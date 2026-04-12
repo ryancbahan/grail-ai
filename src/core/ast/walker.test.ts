@@ -2,7 +2,7 @@ import { collectFiles } from "./walker";
 import { RootNode, FileNode, DirectoryNode } from "./types";
 
 function file(name: string, ext: string | null = null): FileNode {
-  return { type: "file", name, extension: ext, imports: [] };
+  return { type: "file", name, extension: ext, imports: [], symbols: [] };
 }
 
 function dir(name: string, children: (FileNode | DirectoryNode)[] = []): DirectoryNode {

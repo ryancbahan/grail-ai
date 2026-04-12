@@ -17,9 +17,13 @@ export type {
   RootNode,
   TreeOptions,
   Import,
+  ImportedSymbol,
+  Symbol,
+  SymbolKind,
+  SymbolVisibility,
   FileEntry,
 } from "./ast";
 export { detectLanguage } from "./languages";
-export type { LanguageConfig, ResolveContext, ParsedImport } from "./languages/types";
+export type { LanguageConfig, ResolveContext, ParsedImport, GrammarMapping } from "./languages/types";
 export { analyze, initAnalyzer } from "./analyze";
 export type { AnalysisResult } from "./analyze";

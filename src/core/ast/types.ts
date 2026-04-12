@@ -2,11 +2,40 @@ export interface TreeOptions {
   ignorePaths?: string[];
 }
 
+export interface ImportedSymbol {
+  name: string;
+  originalName: string;
+}
+
 export interface Import {
   specifier: string;
-  kind: "static" | "dynamic" | "require" | "convention";
+  kind: string;
   resolvedPath: string | null;
   isExternal: boolean;
+  symbols: ImportedSymbol[];
+}
+
+export type SymbolKind =
+  | "function"
+  | "method"
+  | "class"
+  | "variable"
+  | "type"
+  | "interface"
+  | "enum"
+  | "module"
+  | "trait"
+  | "default"
+  | "unknown";
+
+export type SymbolVisibility = "public" | "private" | "protected" | "internal";
+
+export interface Symbol {
+  name: string;
+  kind: SymbolKind;
+  signature: string;
+  visibility: SymbolVisibility;
+  parent?: string;
 }
 
 interface BaseNode {
@@ -17,6 +46,7 @@ export interface FileNode extends BaseNode {
   type: "file";
   extension: string | null;
   imports: Import[];
+  symbols: Symbol[];
 }
 
 export interface DirectoryNode extends BaseNode {

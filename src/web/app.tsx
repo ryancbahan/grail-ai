@@ -2,11 +2,25 @@ import { render } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import * as d3 from "d3";
 
+interface ImportedSymbol {
+  name: string;
+  originalName: string;
+}
+
 interface Import {
   specifier: string;
   kind: string;
   resolvedPath: string | null;
   isExternal: boolean;
+  symbols: ImportedSymbol[];
+}
+
+interface Symbol {
+  name: string;
+  kind: string;
+  signature: string;
+  visibility: string;
+  parent?: string;
 }
 
 interface FileNode {
@@ -14,6 +28,7 @@ interface FileNode {
   type: "file";
   extension: string | null;
   imports: Import[];
+  symbols: Symbol[];
 }
 
 interface DirectoryNode {

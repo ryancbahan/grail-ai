@@ -7,11 +7,10 @@ import { collectFiles } from "./walker";
 import { RootNode } from "./types";
 import { javascript } from "../languages/javascript";
 import { clearResolverCache } from "../languages/javascript/resolver";
-import { initJavaScriptParsers } from "../languages/javascript/parser";
-import { LanguageConfig } from "../languages/types";
+import { initLanguages } from "../languages";
 
 beforeAll(async () => {
-  await initJavaScriptParsers();
+  await initLanguages();
 });
 
 let tmpDir: string;
@@ -51,6 +50,21 @@ describe("buildDependencyGraph", () => {
     expect(indexFile!.node.imports[0].specifier).toBe("./utils");
     expect(indexFile!.node.imports[0].resolvedPath).toBe(utilsPath);
     expect(indexFile!.node.imports[0].isExternal).toBe(false);
+    expect(indexFile!.node.imports[0].symbols).toEqual([
+      { name: "helper", originalName: "helper" },
+    ]);
+  });
+
+  it("populates symbols on file nodes", () => {
+    writeFile("src/utils.ts", "export function helper() {}\nexport const VERSION = 1;\n");
+
+    const root = buildTree(tmpDir, { ignorePaths: [] });
+    buildDependencyGraph(root, javascript);
+
+    const file = findFile(root, "src/utils.ts");
+    expect(file).toBeDefined();
+    expect(file!.node.symbols).toHaveLength(2);
+    expect(file!.node.symbols.map((s) => s.name).sort()).toEqual(["VERSION", "helper"]);
   });
 
   it("leaves imports empty for files with no imports", () => {
@@ -71,9 +85,9 @@ describe("buildDependencyGraph", () => {
     const root = buildTree(tmpDir, { ignorePaths: [] });
     buildDependencyGraph(root, javascript);
 
-    // CSS files don't get processed — they keep empty imports from buildTree
     const cssFile = findFile(root, "styles.css");
     expect(cssFile!.node.imports).toEqual([]);
+    expect(cssFile!.node.symbols).toEqual([]);
   });
 
   it("populates externals on root", () => {
@@ -101,29 +115,7 @@ describe("buildDependencyGraph", () => {
     const aFile = findFile(root, "a.ts");
     const bFile = findFile(root, "b.ts");
 
-    expect(aFile!.node.imports[0].resolvedPath).toBe(
-      path.join(tmpDir, "b.ts")
-    );
-    expect(bFile!.node.imports[0].resolvedPath).toBe(
-      path.join(tmpDir, "a.ts")
-    );
-  });
-
-  it("does nothing when language has no parseImports", () => {
-    writeFile("index.ts", 'import foo from "bar";\n');
-
-    const noParser: LanguageConfig = {
-      name: "noop",
-      extensions: [".ts"],
-      markers: [],
-      treeOptions: {},
-    };
-
-    const root = buildTree(tmpDir, { ignorePaths: [] });
-    buildDependencyGraph(root, noParser);
-
-    expect(root.externals).toEqual([]);
-    const file = findFile(root, "index.ts");
-    expect(file!.node.imports).toEqual([]);
+    expect(aFile!.node.imports[0].resolvedPath).toBe(path.join(tmpDir, "b.ts"));
+    expect(bFile!.node.imports[0].resolvedPath).toBe(path.join(tmpDir, "a.ts"));
   });
 });

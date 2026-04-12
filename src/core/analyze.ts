@@ -19,7 +19,7 @@ export function analyze(dirPath: string): AnalysisResult {
   const language = detectLanguage(resolved);
   const root = buildTree(resolved, language?.treeOptions);
 
-  if (language?.parseImports) {
+  if (language) {
     buildDependencyGraph(root, language);
   }
 
