@@ -1,6 +1,7 @@
 export { buildTree, DEFAULT_IGNORE } from "./builder";
 export { buildDependencyGraph } from "./dependencies";
 export { collectFiles } from "./walker";
+export { readSymbol } from "./reader";
 export {
   dependenciesOf,
   dependentsOf,
@@ -21,4 +22,5 @@ export type {
   SymbolKind,
   SymbolVisibility,
   FileEntry,
+  SymbolLocation,
 } from "./types";

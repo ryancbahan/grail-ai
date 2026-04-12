@@ -9,6 +9,7 @@ export {
   externalsOf,
   findEntryPoints,
   findCircularDependencies,
+  readSymbol,
 } from "./ast";
 export type {
   ASTNode,
@@ -22,6 +23,7 @@ export type {
   SymbolKind,
   SymbolVisibility,
   FileEntry,
+  SymbolLocation,
 } from "./ast";
 export { detectLanguage } from "./languages";
 export type { LanguageConfig, ResolveContext, ParsedImport, GrammarMapping } from "./languages/types";

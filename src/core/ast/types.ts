@@ -67,3 +67,12 @@ export interface FileEntry {
   filePath: string;
   node: FileNode;
 }
+
+export interface SymbolLocation {
+  file: string;
+  symbol: string;
+  kind: SymbolKind;
+  startLine: number;
+  endLine: number;
+  source: string;
+}

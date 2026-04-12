@@ -10,6 +10,7 @@ import {
   findCircularDependencies,
 } from "../core/ast/queries";
 import { collectFiles } from "../core/ast/walker";
+import { readSymbol } from "../core/ast/reader";
 import { FileNode, Symbol as GrailSymbol } from "../core/ast/types";
 import { formatTree } from "./formatter";
 
@@ -25,6 +26,7 @@ Usage:
   grail <path> entry-points             Files nothing imports
   grail <path> cycles                   Circular dependencies
   grail <path> files                    List all file paths
+  grail <path> read <file> <symbol>      Read a symbol's source code
   grail <path> json                     Full AST as JSON
 `.trim();
 
@@ -203,6 +205,37 @@ async function main() {
     case "files": {
       const files = allFiles.map((f) => rel(f.filePath));
       console.log(JSON.stringify({ files }, null, 2));
+      break;
+    }
+
+    case "read": {
+      if (!commandArg) {
+        console.error("Usage: grail <path> read <file> <symbol> [parent]");
+        process.exit(1);
+      }
+      const symbolName = args[3];
+      const parentName = args[4];
+      if (!symbolName) {
+        console.error("Usage: grail <path> read <file> <symbol> [parent]");
+        process.exit(1);
+      }
+      if (!language) {
+        console.error("No language detected");
+        process.exit(1);
+      }
+      const filePath = resolveFile(root.absolutePath, commandArg);
+      const location = readSymbol(root, language, filePath, symbolName, parentName);
+      if (!location) {
+        console.error(`Symbol not found: ${symbolName} in ${commandArg}`);
+        process.exit(1);
+      }
+      console.log(JSON.stringify({
+        file: rel(location.file),
+        symbol: location.symbol,
+        kind: location.kind,
+        lines: `${location.startLine}-${location.endLine}`,
+        source: location.source,
+      }, null, 2));
       break;
     }
 

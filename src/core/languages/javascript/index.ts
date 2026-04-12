@@ -2,6 +2,7 @@ import { LanguageConfig } from "../types";
 import { parseJavaScriptImports } from "./imports";
 import { parseJavaScriptSymbols } from "./symbols";
 import { resolveJavaScriptImport } from "./resolver";
+import { locateJavaScriptSymbol } from "./locator";
 
 export const javascript: LanguageConfig = {
   name: "javascript",
@@ -15,6 +16,7 @@ export const javascript: LanguageConfig = {
   parseImports: parseJavaScriptImports,
   parseSymbols: parseJavaScriptSymbols,
   resolveImport: resolveJavaScriptImport,
+  locateSymbol: locateJavaScriptSymbol,
   treeOptions: {
     ignorePaths: [
       "node_modules",
