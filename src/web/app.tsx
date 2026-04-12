@@ -2,24 +2,46 @@ import { render } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import * as d3 from "d3";
 
-interface ASTNode {
+interface Import {
+  specifier: string;
+  kind: string;
+  resolvedPath: string | null;
+  isExternal: boolean;
+}
+
+interface FileNode {
   name: string;
-  type: "file" | "directory";
+  type: "file";
   extension: string | null;
-  children?: ASTNode[];
+  imports: Import[];
+}
+
+interface DirectoryNode {
+  name: string;
+  type: "directory";
+  children: ASTNode[];
+}
+
+type ASTNode = FileNode | DirectoryNode;
+
+interface RootNode {
+  type: "root";
+  absolutePath: string;
+  tree: DirectoryNode;
+  externals: string[];
 }
 
 function App() {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [rootName, setRootName] = useState("");
+  const [rootPath, setRootPath] = useState("");
 
   useEffect(() => {
     fetch("/api/tree")
       .then((res) => res.json())
-      .then((data: ASTNode) => {
-        setRootName(data.name);
+      .then((data: RootNode) => {
+        setRootPath(data.absolutePath);
         if (containerRef.current) {
-          renderTree(containerRef.current, data);
+          renderTree(containerRef.current, data.tree);
         }
       });
   }, []);
@@ -28,7 +50,7 @@ function App() {
     <div>
       <header>
         <h1>grail</h1>
-        {rootName && <span>{rootName}/</span>}
+        {rootPath && <span>{rootPath}</span>}
       </header>
       <div ref={containerRef} class="tree-container" />
     </div>

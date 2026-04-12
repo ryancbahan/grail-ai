@@ -1,14 +1,17 @@
 #!/usr/bin/env node
 
 import path from "path";
-import { buildTree } from "../tree";
-import { detectLanguage } from "../languages";
-import { formatTree } from "./formatter";
+import { buildTree } from "../core/ast/builder";
+import { detectLanguage } from "../core/languages";
+import { buildDependencyGraph } from "../core/ast/dependencies";
+import { formatTree, formatDependencyGraph } from "./formatter";
 
-const targetPath = process.argv[2];
+const args = process.argv.slice(2);
+const showDeps = args.includes("--deps");
+const targetPath = args.find((a) => !a.startsWith("--"));
 
 if (!targetPath) {
-  console.error("Usage: grail <path>");
+  console.error("Usage: grail <path> [--deps]");
   process.exit(1);
 }
 
@@ -19,5 +22,14 @@ if (lang) {
   console.log(`Detected language: ${lang.name}\n`);
 }
 
-const tree = buildTree(resolved, lang?.treeOptions);
-console.log(formatTree(tree));
+const root = buildTree(resolved, lang?.treeOptions);
+
+if (lang?.parseImports) {
+  buildDependencyGraph(root, lang);
+}
+
+console.log(formatTree(root.tree));
+
+if (showDeps) {
+  console.log("\n" + formatDependencyGraph(root));
+}

@@ -1,29 +1,17 @@
 import fs from "fs";
 import path from "path";
+import { ASTNode, RootNode, TreeOptions } from "./types";
 
 export const DEFAULT_IGNORE = [
-  "node_modules",
   ".git",
-  "dist",
   ".DS_Store",
 ];
 
-export interface TreeOptions {
-  ignorePaths?: string[];
-}
-
-export type NodeType = "file" | "directory";
-
-export interface ASTNode {
-  name: string;
-  type: NodeType;
-  extension: string | null;
-  children?: ASTNode[];
-}
-
-export function buildTree(dirPath: string, options: TreeOptions = {}): ASTNode {
+export function buildTree(dirPath: string, options: TreeOptions = {}): RootNode {
   const ignored = new Set(options.ignorePaths ?? DEFAULT_IGNORE);
-  return buildNode(dirPath, ignored);
+  const resolved = path.resolve(dirPath);
+  const tree = buildNode(resolved, ignored);
+  return { type: "root", absolutePath: resolved, tree: tree as any, externals: [] };
 }
 
 function buildNode(dirPath: string, ignored: Set<string>): ASTNode {
@@ -32,7 +20,7 @@ function buildNode(dirPath: string, ignored: Set<string>): ASTNode {
 
   if (!stat.isDirectory()) {
     const ext = path.extname(name);
-    return { name, type: "file", extension: ext || null };
+    return { name, type: "file", extension: ext || null, imports: [] };
   }
 
   const entries = fs.readdirSync(dirPath).sort();
@@ -43,6 +31,5 @@ function buildNode(dirPath: string, ignored: Set<string>): ASTNode {
     children.push(buildNode(path.join(dirPath, entry), ignored));
   }
 
-  return { name, type: "directory", extension: null, children };
+  return { name, type: "directory", children };
 }
-

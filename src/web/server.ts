@@ -3,8 +3,9 @@ import path from "path";
 import fs from "fs";
 import { exec } from "child_process";
 import * as esbuild from "esbuild";
-import { buildTree } from "../tree";
-import { detectLanguage } from "../languages";
+import { buildTree } from "../core/ast/builder";
+import { detectLanguage } from "../core/languages";
+import { buildDependencyGraph } from "../core/ast/dependencies";
 
 function getTargetPath(): string {
   const args = process.argv.slice(2);
@@ -30,7 +31,11 @@ async function main() {
 
   const lang = detectLanguage(targetPath);
   if (lang) console.log(`Detected language: ${lang.name}`);
-  const treeData = buildTree(targetPath, lang?.treeOptions);
+  const root = buildTree(targetPath, lang?.treeOptions);
+
+  if (lang?.parseImports) {
+    buildDependencyGraph(root, lang);
+  }
 
   const result = await esbuild.build({
     entryPoints: [path.join(__dirname, "app.tsx")],
@@ -53,7 +58,7 @@ async function main() {
   const server = http.createServer((req, res) => {
     if (req.url === "/api/tree") {
       res.writeHead(200, { "Content-Type": "application/json" });
-      res.end(JSON.stringify(treeData));
+      res.end(JSON.stringify(root));
     } else if (req.url === "/bundle.js") {
       res.writeHead(200, { "Content-Type": "application/javascript" });
       res.end(bundleJs);
