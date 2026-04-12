@@ -1,8 +1,8 @@
 import fs from "fs";
 import path from "path";
 import os from "os";
-import { detectLanguage } from "../core/languages";
-import { javascript } from "../core/languages/javascript";
+import { detectLanguage } from "./index";
+import { javascript } from "./javascript";
 
 let tmpDir: string;
 

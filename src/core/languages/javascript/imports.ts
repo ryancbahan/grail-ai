@@ -1,3 +1,4 @@
+import type { Node } from "web-tree-sitter";
 import { ParsedImport } from "../types";
 import { getParser } from "./parser";
 
@@ -27,7 +28,7 @@ export function parseJavaScriptImports(
 }
 
 function visit(
-  node: any,
+  node: Node,
   add: (specifier: string, kind: ParsedImport["kind"]) => void
 ): void {
   switch (node.type) {

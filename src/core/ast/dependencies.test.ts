@@ -1,12 +1,14 @@
 import fs from "fs";
 import path from "path";
 import os from "os";
-import { buildTree } from "../core/ast/builder";
-import { buildDependencyGraph } from "../core/ast/dependencies";
-import { javascript } from "../core/languages/javascript";
-import { clearResolverCache } from "../core/languages/javascript/resolver";
-import { initJavaScriptParsers } from "../core/languages/javascript/parser";
-import { LanguageConfig } from "../core/languages/types";
+import { buildTree } from "./builder";
+import { buildDependencyGraph } from "./dependencies";
+import { collectFiles } from "./walker";
+import { RootNode } from "./types";
+import { javascript } from "../languages/javascript";
+import { clearResolverCache } from "../languages/javascript/resolver";
+import { initJavaScriptParsers } from "../languages/javascript/parser";
+import { LanguageConfig } from "../languages/types";
 
 beforeAll(async () => {
   await initJavaScriptParsers();
@@ -20,19 +22,8 @@ function writeFile(relativePath: string, content: string) {
   fs.writeFileSync(fullPath, content);
 }
 
-function findFile(root: ReturnType<typeof buildTree>, name: string) {
-  const files: { path: string; node: any }[] = [];
-  function walk(node: any, currentPath: string) {
-    if (node.type === "file") {
-      files.push({ path: currentPath, node });
-      return;
-    }
-    for (const child of node.children) {
-      walk(child, path.join(currentPath, child.name));
-    }
-  }
-  walk(root.tree, root.absolutePath);
-  return files.find((f) => f.path.endsWith(name));
+function findFile(root: RootNode, name: string) {
+  return collectFiles(root).find((f) => f.filePath.endsWith(name));
 }
 
 beforeEach(() => {

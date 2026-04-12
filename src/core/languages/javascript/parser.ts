@@ -1,15 +1,21 @@
 import fs from "fs";
 import path from "path";
+import type { Parser, Language } from "web-tree-sitter";
 
+// web-tree-sitter uses dynamic import internally; require avoids
+// needing --experimental-vm-modules in Node
 // eslint-disable-next-line @typescript-eslint/no-var-requires
-const TreeSitter = require("web-tree-sitter");
+const TreeSitter: {
+  Parser: typeof Parser & { init: (opts?: Record<string, unknown>) => Promise<void> };
+  Language: typeof Language;
+} = require("web-tree-sitter");
 
 let initialized = false;
 let initPromise: Promise<void> | null = null;
 
-let jsParser: any;
-let tsParser: any;
-let tsxParser: any;
+let jsParser: Parser;
+let tsParser: Parser;
+let tsxParser: Parser;
 
 const TS_EXTENSIONS = new Set([".ts", ".mts", ".cts"]);
 const TSX_EXTENSIONS = new Set([".tsx"]);
@@ -53,7 +59,7 @@ export async function initJavaScriptParsers(): Promise<void> {
   return initPromise;
 }
 
-export function getParser(filePath: string): any {
+export function getParser(filePath: string): Parser {
   if (!initialized) {
     throw new Error(
       "Tree-sitter parsers not initialized. Call initJavaScriptParsers() first."

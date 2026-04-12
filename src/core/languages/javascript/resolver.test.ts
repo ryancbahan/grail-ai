@@ -4,8 +4,8 @@ import os from "os";
 import {
   resolveJavaScriptImport,
   clearResolverCache,
-} from "../core/languages/javascript/resolver";
-import { ResolveContext } from "../core/languages/types";
+} from "./resolver";
+import { ResolveContext } from "../types";
 
 let tmpDir: string;
 let ctx: ResolveContext;
@@ -61,6 +61,20 @@ describe("resolveJavaScriptImport", () => {
       touch(path.join(tmpDir, "src", "utils", "index.ts"));
       const result = resolveJavaScriptImport("./utils", ctx);
       expect(result).toBe(path.join(tmpDir, "src", "utils", "index.ts"));
+    });
+
+    it("prefers .ts over .js when both exist", () => {
+      touch(path.join(tmpDir, "src", "utils.ts"));
+      touch(path.join(tmpDir, "src", "utils.js"));
+      const result = resolveJavaScriptImport("./utils", ctx);
+      expect(result).toBe(path.join(tmpDir, "src", "utils.ts"));
+    });
+
+    it("prefers exact file over index when both exist", () => {
+      touch(path.join(tmpDir, "src", "utils.ts"));
+      touch(path.join(tmpDir, "src", "utils", "index.ts"));
+      const result = resolveJavaScriptImport("./utils", ctx);
+      expect(result).toBe(path.join(tmpDir, "src", "utils.ts"));
     });
 
     it("resolves parent directory import", () => {

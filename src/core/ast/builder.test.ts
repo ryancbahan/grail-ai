@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import os from "os";
-import { buildTree, DEFAULT_IGNORE } from "../core/ast/builder";
+import { buildTree, DEFAULT_IGNORE } from "./builder";
 
 let tmpDir: string;
 
