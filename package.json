@@ -1,0 +1,30 @@
+{
+  "name": "grail",
+  "version": "1.0.0",
+  "description": "A codebase analyzer CLI",
+  "main": "dist/cli/index.js",
+  "bin": {
+    "grail": "dist/cli/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "ts-node src/web/server.ts",
+    "cli": "ts-node src/cli/index.ts",
+    "start": "node dist/cli/index.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "@types/node": "^25.6.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^6.0.2"
+  },
+  "dependencies": {
+    "@types/d3": "^7.4.3",
+    "d3": "^7.9.0",
+    "esbuild": "^0.28.0",
+    "preact": "^10.29.1"
+  }
+}
