@@ -1,5 +1,6 @@
 import path from "path";
 import { ASTNode, RootNode } from "../core/ast/types";
+import { collectFiles } from "../core/ast/walker";
 import { findCircularDependencies } from "../core/ast/queries";
 
 export function formatTree(tree: ASTNode): string {
@@ -29,33 +30,15 @@ function walk(
   });
 }
 
-function collectFiles(
-  node: ASTNode,
-  currentPath: string,
-  out: { filePath: string; node: ASTNode }[]
-): void {
-  if (node.type === "file") {
-    out.push({ filePath: currentPath, node });
-    return;
-  }
-  for (const child of node.children) {
-    collectFiles(child, path.join(currentPath, child.name), out);
-  }
-}
-
 export function formatDependencyGraph(root: RootNode): string {
   const lines: string[] = [];
   const rel = (p: string) => path.relative(root.absolutePath, p);
+  const files = collectFiles(root);
 
   lines.push("Dependencies");
   lines.push("============");
 
-  const files: { filePath: string; node: ASTNode }[] = [];
-  collectFiles(root.tree, root.absolutePath, files);
-
   for (const { filePath, node } of files) {
-    if (node.type !== "file") continue;
-
     lines.push("");
     lines.push(rel(filePath));
 

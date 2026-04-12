@@ -12,6 +12,7 @@ export interface LanguageConfig {
   extensions: string[];
   markers: string[];
   treeOptions: TreeOptions;
+  init?: () => Promise<void>;
   parseImports?: (filePath: string, content: string) => ParsedImport[];
   resolveImport?: (specifier: string, context: ResolveContext) => string | null;
   inferDependencies?: (filePath: string, content: string, context: ResolveContext) => ParsedImport[];

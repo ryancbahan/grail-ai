@@ -5,6 +5,12 @@ import { javascript } from "./javascript";
 
 const languages: LanguageConfig[] = [javascript];
 
+export async function initLanguages(): Promise<void> {
+  await Promise.all(
+    languages.filter((lang) => lang.init).map((lang) => lang.init!())
+  );
+}
+
 export function detectLanguage(dirPath: string): LanguageConfig | undefined {
   const entries = new Set(fs.readdirSync(dirPath));
 

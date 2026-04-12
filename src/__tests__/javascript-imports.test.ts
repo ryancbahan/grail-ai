@@ -1,6 +1,11 @@
 import { parseJavaScriptImports } from "../core/languages/javascript/imports";
+import { initJavaScriptParsers } from "../core/languages/javascript/parser";
 
 const parse = (content: string) => parseJavaScriptImports("test.ts", content);
+
+beforeAll(async () => {
+  await initJavaScriptParsers();
+});
 
 describe("parseJavaScriptImports", () => {
   describe("ES static imports", () => {

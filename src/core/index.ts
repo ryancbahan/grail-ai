@@ -2,6 +2,7 @@ export {
   buildTree,
   DEFAULT_IGNORE,
   buildDependencyGraph,
+  collectFiles,
   dependenciesOf,
   dependentsOf,
   allExternals,
@@ -16,6 +17,9 @@ export type {
   RootNode,
   TreeOptions,
   Import,
+  FileEntry,
 } from "./ast";
 export { detectLanguage } from "./languages";
 export type { LanguageConfig, ResolveContext, ParsedImport } from "./languages/types";
+export { analyze, initAnalyzer } from "./analyze";
+export type { AnalysisResult } from "./analyze";

@@ -1,33 +1,8 @@
-import path from "path";
-import { ASTNode, FileNode, RootNode } from "./types";
-
-interface FileEntry {
-  filePath: string;
-  node: FileNode;
-}
-
-function collectAllFiles(
-  node: ASTNode,
-  currentPath: string,
-  out: FileEntry[]
-): void {
-  if (node.type === "file") {
-    out.push({ filePath: currentPath, node });
-    return;
-  }
-  for (const child of node.children) {
-    collectAllFiles(child, path.join(currentPath, child.name), out);
-  }
-}
-
-function getFiles(root: RootNode): FileEntry[] {
-  const files: FileEntry[] = [];
-  collectAllFiles(root.tree, root.absolutePath, files);
-  return files;
-}
+import { RootNode } from "./types";
+import { collectFiles } from "./walker";
 
 export function dependenciesOf(root: RootNode, filePath: string): string[] {
-  const file = getFiles(root).find((f) => f.filePath === filePath);
+  const file = collectFiles(root).find((f) => f.filePath === filePath);
   if (!file) return [];
   return file.node.imports
     .filter((i) => i.resolvedPath !== null)
@@ -36,7 +11,7 @@ export function dependenciesOf(root: RootNode, filePath: string): string[] {
 
 export function dependentsOf(root: RootNode, filePath: string): string[] {
   const result: string[] = [];
-  for (const file of getFiles(root)) {
+  for (const file of collectFiles(root)) {
     if (file.node.imports.some((i) => i.resolvedPath === filePath)) {
       result.push(file.filePath);
     }
@@ -49,7 +24,7 @@ export function allExternals(root: RootNode): string[] {
 }
 
 export function externalsOf(root: RootNode, filePath: string): string[] {
-  const file = getFiles(root).find((f) => f.filePath === filePath);
+  const file = collectFiles(root).find((f) => f.filePath === filePath);
   if (!file) return [];
   return file.node.imports
     .filter((i) => i.isExternal)
@@ -57,7 +32,7 @@ export function externalsOf(root: RootNode, filePath: string): string[] {
 }
 
 export function findEntryPoints(root: RootNode): string[] {
-  const files = getFiles(root);
+  const files = collectFiles(root);
   const imported = new Set<string>();
   for (const file of files) {
     for (const imp of file.node.imports) {
@@ -70,7 +45,7 @@ export function findEntryPoints(root: RootNode): string[] {
 }
 
 export function findCircularDependencies(root: RootNode): string[][] {
-  const files = getFiles(root);
+  const files = collectFiles(root);
   const fileMap = new Map(files.map((f) => [f.filePath, f]));
 
   let index = 0;

@@ -3,9 +3,7 @@ import path from "path";
 import fs from "fs";
 import { exec } from "child_process";
 import * as esbuild from "esbuild";
-import { buildTree } from "../core/ast/builder";
-import { detectLanguage } from "../core/languages";
-import { buildDependencyGraph } from "../core/ast/dependencies";
+import { analyze, initAnalyzer } from "../core/analyze";
 
 function getTargetPath(): string {
   const args = process.argv.slice(2);
@@ -29,13 +27,9 @@ async function main() {
     process.exit(1);
   }
 
-  const lang = detectLanguage(targetPath);
-  if (lang) console.log(`Detected language: ${lang.name}`);
-  const root = buildTree(targetPath, lang?.treeOptions);
-
-  if (lang?.parseImports) {
-    buildDependencyGraph(root, lang);
-  }
+  await initAnalyzer();
+  const { root, language } = analyze(targetPath);
+  if (language) console.log(`Detected language: ${language.name}`);
 
   const result = await esbuild.build({
     entryPoints: [path.join(__dirname, "app.tsx")],

@@ -32,3 +32,8 @@ export interface RootNode {
   tree: DirectoryNode;
   externals: string[];
 }
+
+export interface FileEntry {
+  filePath: string;
+  node: FileNode;
+}

@@ -1,5 +1,6 @@
 export { buildTree, DEFAULT_IGNORE } from "./builder";
 export { buildDependencyGraph } from "./dependencies";
+export { collectFiles } from "./walker";
 export {
   dependenciesOf,
   dependentsOf,
@@ -15,4 +16,5 @@ export type {
   RootNode,
   TreeOptions,
   Import,
+  FileEntry,
 } from "./types";

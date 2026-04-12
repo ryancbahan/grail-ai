@@ -8,8 +8,8 @@
   },
   "scripts": {
     "build": "tsc",
-    "dev": "ts-node src/web/server.ts",
-    "cli": "ts-node src/cli/index.ts",
+    "grail": "ts-node src/cli/index.ts",
+    "ui": "ts-node src/web/server.ts",
     "start": "node dist/cli/index.js",
     "test": "jest"
   },
@@ -29,6 +29,9 @@
     "@types/d3": "^7.4.3",
     "d3": "^7.9.0",
     "esbuild": "^0.28.0",
-    "preact": "^10.29.1"
+    "preact": "^10.29.1",
+    "tree-sitter-javascript": "^0.25.0",
+    "tree-sitter-typescript": "^0.23.2",
+    "web-tree-sitter": "^0.26.8"
   }
 }

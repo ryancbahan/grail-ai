@@ -1,25 +1,7 @@
 import fs from "fs";
-import path from "path";
-import { ASTNode, FileNode, Import, RootNode } from "./types";
+import { Import, RootNode } from "./types";
+import { collectFiles } from "./walker";
 import { LanguageConfig, ResolveContext } from "../languages/types";
-
-function walkFiles(
-  node: ASTNode,
-  currentPath: string,
-  extensions: Set<string>,
-  out: Map<string, FileNode>
-): void {
-  if (node.type === "file") {
-    if (node.extension && extensions.has(node.extension)) {
-      out.set(currentPath, node);
-    }
-    return;
-  }
-
-  for (const child of node.children) {
-    walkFiles(child, path.join(currentPath, child.name), extensions, out);
-  }
-}
 
 function getPackageName(specifier: string): string {
   if (specifier.startsWith("@")) {
@@ -36,12 +18,12 @@ export function buildDependencyGraph(
   if (!lang.parseImports) return;
 
   const extensions = new Set(lang.extensions);
-  const files = new Map<string, FileNode>();
-  walkFiles(root.tree, root.absolutePath, extensions, files);
-
+  const allFiles = collectFiles(root);
   const externals = new Set<string>();
 
-  for (const [filePath, fileNode] of files) {
+  for (const { filePath, node } of allFiles) {
+    if (!node.extension || !extensions.has(node.extension)) continue;
+
     let content: string;
     try {
       content = fs.readFileSync(filePath, "utf-8");
@@ -75,7 +57,7 @@ export function buildDependencyGraph(
       return { specifier, kind, resolvedPath, isExternal };
     });
 
-    fileNode.imports = imports;
+    node.imports = imports;
   }
 
   root.externals = [...externals].sort();

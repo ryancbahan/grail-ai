@@ -85,14 +85,6 @@ function tryResolveFile(filePath: string): string | null {
   return null;
 }
 
-function getPackageName(specifier: string): string {
-  if (specifier.startsWith("@")) {
-    const parts = specifier.split("/");
-    return parts.slice(0, 2).join("/");
-  }
-  return specifier.split("/")[0];
-}
-
 export function resolveJavaScriptImport(
   specifier: string,
   context: ResolveContext

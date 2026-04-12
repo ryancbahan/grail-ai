@@ -5,7 +5,12 @@ import { buildTree } from "../core/ast/builder";
 import { buildDependencyGraph } from "../core/ast/dependencies";
 import { javascript } from "../core/languages/javascript";
 import { clearResolverCache } from "../core/languages/javascript/resolver";
+import { initJavaScriptParsers } from "../core/languages/javascript/parser";
 import { LanguageConfig } from "../core/languages/types";
+
+beforeAll(async () => {
+  await initJavaScriptParsers();
+});
 
 let tmpDir: string;
 
