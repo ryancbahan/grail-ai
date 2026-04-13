@@ -6,6 +6,8 @@ Runtime codebase AST with dependency graphs, symbol extraction, and function sig
 summary        → what does every file expose?
 dependencies   → what does this file depend on? (with resolved signatures)
 dependents     → what breaks if I change this? (with consumed symbols)
+calls          → what does this function call? (with resolved signatures)
+callers        → what calls this function? (function-level blast radius)
 read           → show me just this one function's implementation
 ```
 
@@ -31,6 +33,8 @@ npx grail-ai <path> tree                       # file tree
 npx grail-ai <path> summary [file]             # symbols + deps per file
 npx grail-ai <path> dependencies <file>        # imports with resolved signatures
 npx grail-ai <path> dependents <file>          # consumers with consumed symbols
+npx grail-ai <path> calls <file> <symbol>       # what does this function call
+npx grail-ai <path> callers <file> <symbol>    # what calls this function
 npx grail-ai <path> read <file> <symbol>       # one symbol's source code
 npx grail-ai <path> externals [file]           # external packages
 npx grail-ai <path> entry-points               # files nothing imports
@@ -58,7 +62,7 @@ Add to your MCP config:
 }
 ```
 
-Tools: `grail_summary`, `grail_dependencies`, `grail_dependents`, `grail_read`, `grail_externals`, `grail_entry_points`, `grail_cycles`.
+Tools: `grail_summary`, `grail_dependencies`, `grail_dependents`, `grail_calls`, `grail_callers`, `grail_read`, `grail_externals`, `grail_entry_points`, `grail_cycles`.
 
 ## Claude Code Skill
 
