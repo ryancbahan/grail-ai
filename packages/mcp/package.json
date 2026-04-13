@@ -1,0 +1,23 @@
+{
+  "name": "@grail/mcp",
+  "version": "1.0.0",
+  "description": "Grail MCP server — codebase analysis for AI agents",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "grail-mcp": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "echo 'tested via inspector'"
+  },
+  "dependencies": {
+    "grail": "*",
+    "@modelcontextprotocol/sdk": "^1.12.1",
+    "zod": "^3.25.67"
+  },
+  "devDependencies": {
+    "@types/node": "^25.6.0",
+    "typescript": "^6.0.2"
+  }
+}

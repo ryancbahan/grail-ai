@@ -1,5 +1,5 @@
 {
-  "name": "@grail/cli",
+  "name": "grail",
   "version": "1.0.0",
   "description": "Grail CLI - codebase analyzer",
   "main": "dist/index.js",
