@@ -99,22 +99,32 @@ server.registerTool("grail_cycles", {
 }, async ({ path: p, depth }) => text(grail(`${p} cycles${depthFlag(depth)}`)));
 
 server.registerTool("grail_calls", {
-  description: "Show what a function calls, with resolved signatures from the target functions. Uses TypeScript compiler for accurate resolution.",
+  description: "Show what a function calls, with resolved signatures. Use --transitive for the full call chain. Use --depth to limit chain depth.",
   inputSchema: {
     path: z.string().describe("Path to the project directory"),
     file: z.string().describe("Relative path to the file"),
     symbol: z.string().describe("Name of the function/method"),
+    transitive: z.boolean().optional().describe("Follow calls transitively (full chain)"),
+    depth: z.number().optional().describe("Limit transitive chain depth"),
   },
-}, async ({ path: p, file, symbol }) => text(grail(`${p} calls ${file} ${symbol}`)));
+}, async ({ path: p, file, symbol, transitive, depth }) => {
+  const flags = `${transitive ? " --transitive" : ""}${depth !== undefined ? ` --depth ${depth}` : ""}`;
+  return text(grail(`${p} calls ${file} ${symbol}${flags}`));
+});
 
 server.registerTool("grail_callers", {
-  description: "Show what calls a given function. Uses TypeScript compiler for accurate resolution.",
+  description: "Show what calls a given function. Use --transitive for the full impact chain (blast radius). Use --depth to limit chain depth.",
   inputSchema: {
     path: z.string().describe("Path to the project directory"),
     file: z.string().describe("Relative path to the file"),
     symbol: z.string().describe("Name of the function/method"),
+    transitive: z.boolean().optional().describe("Follow callers transitively (full impact chain)"),
+    depth: z.number().optional().describe("Limit transitive chain depth"),
   },
-}, async ({ path: p, file, symbol }) => text(grail(`${p} callers ${file} ${symbol}`)));
+}, async ({ path: p, file, symbol, transitive, depth }) => {
+  const flags = `${transitive ? " --transitive" : ""}${depth !== undefined ? ` --depth ${depth}` : ""}`;
+  return text(grail(`${p} callers ${file} ${symbol}${flags}`));
+});
 
 async function main() {
   const transport = new StdioServerTransport();

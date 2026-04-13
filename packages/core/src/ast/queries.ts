@@ -1,17 +1,16 @@
-import { RootNode } from "./types";
-import { collectFiles } from "./walker";
+import { FileEntry, RootNode } from "./types";
 
-export function dependenciesOf(root: RootNode, filePath: string): string[] {
-  const file = collectFiles(root).find((f) => f.filePath === filePath);
+export function dependenciesOf(files: FileEntry[], filePath: string): string[] {
+  const file = files.find((f) => f.filePath === filePath);
   if (!file) return [];
   return file.node.imports
     .filter((i) => i.resolvedPath !== null)
     .map((i) => i.resolvedPath!);
 }
 
-export function dependentsOf(root: RootNode, filePath: string): string[] {
+export function dependentsOf(files: FileEntry[], filePath: string): string[] {
   const result: string[] = [];
-  for (const file of collectFiles(root)) {
+  for (const file of files) {
     if (file.node.imports.some((i) => i.resolvedPath === filePath)) {
       result.push(file.filePath);
     }
@@ -23,16 +22,15 @@ export function allExternals(root: RootNode): string[] {
   return [...root.externals];
 }
 
-export function externalsOf(root: RootNode, filePath: string): string[] {
-  const file = collectFiles(root).find((f) => f.filePath === filePath);
+export function externalsOf(files: FileEntry[], filePath: string): string[] {
+  const file = files.find((f) => f.filePath === filePath);
   if (!file) return [];
   return file.node.imports
     .filter((i) => i.isExternal)
     .map((i) => i.specifier);
 }
 
-export function findEntryPoints(root: RootNode): string[] {
-  const files = collectFiles(root);
+export function findEntryPoints(files: FileEntry[]): string[] {
   const imported = new Set<string>();
   for (const file of files) {
     for (const imp of file.node.imports) {
@@ -44,8 +42,7 @@ export function findEntryPoints(root: RootNode): string[] {
     .filter((f) => !imported.has(f));
 }
 
-export function findCircularDependencies(root: RootNode): string[][] {
-  const files = collectFiles(root);
+export function findCircularDependencies(files: FileEntry[]): string[][] {
   const fileMap = new Map(files.map((f) => [f.filePath, f]));
 
   let index = 0;

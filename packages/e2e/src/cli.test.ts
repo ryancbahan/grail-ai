@@ -301,6 +301,57 @@ describe("e2e: callers", () => {
   });
 });
 
+describe("e2e: transitive calls", () => {
+  it("--transitive follows the full call chain", () => {
+    // main -> createUser -> validateEmail
+    const result = json(`${TS_APP} calls src/index.ts main --transitive`);
+    const names = result.calls.map((c: any) => c.name);
+    expect(names).toContain("createUser");
+    expect(names).toContain("validateEmail"); // transitive — createUser calls validateEmail
+    expect(names).toContain("formatUser");
+  });
+
+  it("--transitive without --depth returns all reachable calls", () => {
+    const result = json(`${TS_APP} calls src/index.ts main --transitive`);
+    expect(result.calls.length).toBeGreaterThan(2); // more than direct calls
+  });
+
+  it("--transitive --depth 1 returns only direct calls", () => {
+    const result = json(`${TS_APP} calls src/index.ts main --transitive --depth 1`);
+    const names = result.calls.map((c: any) => c.name);
+    expect(names).toContain("createUser");
+    expect(names).toContain("formatUser");
+    expect(names).not.toContain("validateEmail"); // too deep
+  });
+
+  it("calls are ordered leaves-first", () => {
+    const result = json(`${TS_APP} calls src/index.ts main --transitive`);
+    if (result.calls.length >= 2) {
+      const validateIdx = result.calls.findIndex((c: any) => c.name === "validateEmail");
+      const createIdx = result.calls.findIndex((c: any) => c.name === "createUser");
+      if (validateIdx >= 0 && createIdx >= 0) {
+        expect(validateIdx).toBeLessThan(createIdx); // leaf before orchestrator
+      }
+    }
+  });
+});
+
+describe("e2e: transitive callers", () => {
+  it("--transitive follows the full caller chain (blast radius)", () => {
+    // validateEmail <- createUser <- main, addUser
+    const result = json(`${TS_APP} callers src/utils.ts validateEmail --transitive`);
+    const names = result.callers.map((c: any) => c.name);
+    expect(names).toContain("createUser"); // direct
+    expect(names.length).toBeGreaterThanOrEqual(2); // transitive callers of createUser
+  });
+
+  it("--transitive --depth 1 returns only direct callers", () => {
+    const result = json(`${TS_APP} callers src/utils.ts validateEmail --transitive --depth 1`);
+    expect(result.callers).toHaveLength(1);
+    expect(result.callers[0].name).toBe("createUser");
+  });
+});
+
 describe("e2e: read", () => {
   it("reads function with complete unified shape", () => {
     const result = json(`${TS_APP} read src/utils.ts createUser`);

@@ -81,7 +81,7 @@ export function formatDependencyGraph(root: RootNode): string {
     lines.push(`Externals: ${root.externals.join(", ")}`);
   }
 
-  const cycles = findCircularDependencies(root);
+  const cycles = findCircularDependencies(files);
   if (cycles.length > 0) {
     lines.push("");
     lines.push("Circular dependencies:");
