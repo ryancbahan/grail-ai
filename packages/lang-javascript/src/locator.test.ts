@@ -1,10 +1,10 @@
 import { locateJavaScriptSymbol } from "./locator";
-import { registerLanguage, initLanguages, parseFile } from "@grail-ai/core";
+import { registerLanguage, loadLanguage, parseFile } from "@grail-ai/core";
 import { javascript } from "./index";
 
 beforeAll(async () => {
   registerLanguage(javascript);
-  await initLanguages();
+  await loadLanguage(javascript);
 });
 
 function locate(content: string, symbolName: string, parentName?: string) {

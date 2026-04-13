@@ -3,7 +3,6 @@
 import path from "path";
 import {
   analyze,
-  initAnalyzer,
   registerLanguage,
   dependenciesOf,
   dependentsOf,
@@ -84,15 +83,13 @@ async function main() {
   const command = filteredArgs[1] || "tree";
   const commandArg = filteredArgs[2];
 
-  await initAnalyzer();
-
-  const { root, language } = analyze(targetPath, { depth });
+  const { root, language } = await analyze(targetPath, { depth });
   const rel = (p: string) => path.relative(root.absolutePath, p);
   const allFiles = collectFiles(root);
 
   switch (command) {
     case "tree": {
-      if (language) console.log(`Detected language: ${language.name}\n`);
+      if (language) console.log(`Detected language: ${language.descriptor.name}\n`);
       console.log(formatTree(root.tree));
       break;
     }

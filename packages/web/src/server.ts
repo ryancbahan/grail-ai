@@ -3,7 +3,7 @@ import path from "path";
 import fs from "fs";
 import { exec } from "child_process";
 import * as esbuild from "esbuild";
-import { analyze, initAnalyzer, registerLanguage } from "@grail-ai/core";
+import { analyze, registerLanguage } from "@grail-ai/core";
 import type { RootNode } from "@grail-ai/core";
 import { javascript } from "@grail-ai/lang-javascript";
 
@@ -51,9 +51,8 @@ async function main() {
     process.exit(1);
   }
 
-  await initAnalyzer();
-  const { root, language } = analyze(resolved);
-  if (language) console.log(`Detected language: ${language.name}`);
+  const { root, language } = await analyze(resolved);
+  if (language) console.log(`Detected language: ${language.descriptor.name}`);
 
   const result = await esbuild.build({
     entryPoints: [path.join(__dirname, "app.tsx")],

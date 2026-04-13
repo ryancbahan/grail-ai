@@ -1,12 +1,8 @@
-import { LanguageConfig } from "@grail-ai/core";
-import { parseJavaScriptImports } from "./imports";
-import { parseJavaScriptSymbols } from "./symbols";
-import { resolveJavaScriptImport, clearResolverCache } from "./resolver";
+import type { LanguageDescriptor } from "@grail-ai/core";
 
-export { clearResolverCache };
-import { locateJavaScriptSymbol } from "./locator";
+export { clearResolverCache } from "./resolver";
 
-export const javascript: LanguageConfig = {
+export const javascript: LanguageDescriptor = {
   name: "javascript",
   extensions: [".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs"],
   markers: ["package.json"],
@@ -15,10 +11,6 @@ export const javascript: LanguageConfig = {
     { extensions: [".ts", ".mts", ".cts"], grammarPackage: "tree-sitter-typescript", wasmFile: "tree-sitter-typescript.wasm" },
     { extensions: [".tsx"], grammarPackage: "tree-sitter-typescript", wasmFile: "tree-sitter-tsx.wasm" },
   ],
-  parseImports: parseJavaScriptImports,
-  parseSymbols: parseJavaScriptSymbols,
-  resolveImport: resolveJavaScriptImport,
-  locateSymbol: locateJavaScriptSymbol,
   treeOptions: {
     ignorePaths: [
       "node_modules",
@@ -30,5 +22,19 @@ export const javascript: LanguageConfig = {
       ".next",
       ".nuxt",
     ],
+  },
+  load: async () => {
+    const [imports, symbols, resolver, locator] = await Promise.all([
+      import("./imports"),
+      import("./symbols"),
+      import("./resolver"),
+      import("./locator"),
+    ]);
+    return {
+      parseImports: imports.parseJavaScriptImports,
+      parseSymbols: symbols.parseJavaScriptSymbols,
+      resolveImport: resolver.resolveJavaScriptImport,
+      locateSymbol: locator.locateJavaScriptSymbol,
+    };
   },
 };

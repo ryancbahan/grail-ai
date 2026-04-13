@@ -1,19 +1,21 @@
 import fs from "fs";
 import path from "path";
 import os from "os";
-import { detectLanguage, registerLanguage } from "./index";
-import { LanguageConfig } from "./types";
+import { detectLanguage, registerLanguage, loadLanguage } from "./index";
+import { LanguageDescriptor } from "./types";
 
-const mockLang: LanguageConfig = {
+const mockLang: LanguageDescriptor = {
   name: "mock",
   extensions: [".mock", ".mk"],
   markers: ["mock.config"],
   treeOptions: {},
   grammars: [],
-  parseImports: () => [],
-  parseSymbols: () => [],
-  resolveImport: () => null,
-  locateSymbol: () => null,
+  load: async () => ({
+    parseImports: () => [],
+    parseSymbols: () => [],
+    resolveImport: () => null,
+    locateSymbol: () => null,
+  }),
 };
 
 let tmpDir: string;
@@ -65,5 +67,47 @@ describe("detectLanguage", () => {
   it("returns undefined when no language matches", () => {
     touch(path.join(tmpDir, "data.csv"));
     expect(detectLanguage(tmpDir)).toBeUndefined();
+  });
+});
+
+describe("loadLanguage", () => {
+  it("calls load() and returns Language with descriptor + implementation", async () => {
+    const language = await loadLanguage(mockLang);
+    expect(language.descriptor).toBe(mockLang);
+    expect(language.implementation).toBeDefined();
+    expect(typeof language.implementation.parseImports).toBe("function");
+    expect(typeof language.implementation.parseSymbols).toBe("function");
+    expect(typeof language.implementation.resolveImport).toBe("function");
+    expect(typeof language.implementation.locateSymbol).toBe("function");
+  });
+
+  it("caches result — load() is only called once", async () => {
+    let loadCount = 0;
+    const trackingLang: LanguageDescriptor = {
+      ...mockLang,
+      name: "tracking",
+      load: async () => {
+        loadCount++;
+        return {
+          parseImports: () => [],
+          parseSymbols: () => [],
+          resolveImport: () => null,
+          locateSymbol: () => null,
+        };
+      },
+    };
+    registerLanguage(trackingLang);
+
+    await loadLanguage(trackingLang);
+    await loadLanguage(trackingLang);
+    await loadLanguage(trackingLang);
+
+    expect(loadCount).toBe(1);
+  });
+
+  it("returns implementation that works", async () => {
+    const language = await loadLanguage(mockLang);
+    expect(language.implementation.parseImports("test.ts", "", null)).toEqual([]);
+    expect(language.implementation.resolveImport("./foo", { containingFile: "", projectRoot: "" })).toBeNull();
   });
 });

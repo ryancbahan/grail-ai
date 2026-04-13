@@ -2,7 +2,7 @@ import fs from "fs";
 import { Import, RootNode } from "./types";
 import { collectFiles } from "./walker";
 import { parseFile } from "../languages/grammar-loader";
-import { LanguageConfig, ResolveContext } from "../languages/types";
+import { Language, ResolveContext } from "../languages/types";
 
 function getPackageName(specifier: string): string {
   if (specifier.startsWith("@")) {
@@ -14,9 +14,10 @@ function getPackageName(specifier: string): string {
 
 export function buildDependencyGraph(
   root: RootNode,
-  lang: LanguageConfig
+  lang: Language
 ): void {
-  const extensions = new Set(lang.extensions);
+  const { descriptor, implementation } = lang;
+  const extensions = new Set(descriptor.extensions);
   const allFiles = collectFiles(root);
   const externals = new Set<string>();
 
@@ -33,19 +34,19 @@ export function buildDependencyGraph(
     // Parse once, pass tree to both hooks
     const tree = parseFile(filePath, content);
 
-    const parsed = lang.parseImports(filePath, content, tree);
+    const parsed = implementation.parseImports(filePath, content, tree);
 
     const context: ResolveContext = {
       containingFile: filePath,
       projectRoot: root.absolutePath,
     };
 
-    if (lang.inferDependencies) {
-      parsed.push(...lang.inferDependencies(filePath, content, context));
+    if (implementation.inferDependencies) {
+      parsed.push(...implementation.inferDependencies(filePath, content, context));
     }
 
     const imports: Import[] = parsed.map(({ specifier, kind, symbols }) => {
-      const resolvedPath = lang.resolveImport(specifier, context);
+      const resolvedPath = implementation.resolveImport(specifier, context);
 
       const isRelative = specifier.startsWith(".");
       const isExternal = !isRelative && resolvedPath === null;
@@ -58,7 +59,7 @@ export function buildDependencyGraph(
     });
 
     node.imports = imports;
-    node.symbols = lang.parseSymbols(filePath, content, tree);
+    node.symbols = implementation.parseSymbols(filePath, content, tree);
 
     // Clean up tree-sitter tree
     if (tree && typeof (tree as { delete?: () => void }).delete === "function") {
