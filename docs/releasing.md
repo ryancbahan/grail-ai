@@ -44,11 +44,11 @@ The publish workflow runs automatically — builds, tests, uploads tarball, publ
 
 ## Package Publish Order
 
-1. `@grail/core`
-2. `@grail/lang-javascript`
+1. `@grail-ai/core`
+2. `@grail-ai/lang-javascript`
 3. `grail` (CLI)
-4. `@grail/web`
-5. `@grail/mcp`
+4. `@grail-ai/web`
+5. `@grail-ai/mcp`
 
 ## Troubleshooting
 

@@ -3,9 +3,9 @@ import path from "path";
 import fs from "fs";
 import { exec } from "child_process";
 import * as esbuild from "esbuild";
-import { analyze, initAnalyzer, registerLanguage } from "@grail/core";
-import type { RootNode } from "@grail/core";
-import { javascript } from "@grail/lang-javascript";
+import { analyze, initAnalyzer, registerLanguage } from "@grail-ai/core";
+import type { RootNode } from "@grail-ai/core";
+import { javascript } from "@grail-ai/lang-javascript";
 
 registerLanguage(javascript);
 

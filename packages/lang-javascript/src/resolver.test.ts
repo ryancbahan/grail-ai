@@ -5,7 +5,7 @@ import {
   resolveJavaScriptImport,
   clearResolverCache,
 } from "./resolver";
-import { ResolveContext } from "@grail/core";
+import { ResolveContext } from "@grail-ai/core";
 
 let tmpDir: string;
 let ctx: ResolveContext;

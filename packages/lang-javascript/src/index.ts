@@ -1,4 +1,4 @@
-import { LanguageConfig } from "@grail/core";
+import { LanguageConfig } from "@grail-ai/core";
 import { parseJavaScriptImports } from "./imports";
 import { parseJavaScriptSymbols } from "./symbols";
 import { resolveJavaScriptImport, clearResolverCache } from "./resolver";

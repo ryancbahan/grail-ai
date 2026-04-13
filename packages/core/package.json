@@ -1,5 +1,5 @@
 {
-  "name": "@grail/core",
+  "name": "@grail-ai/core",
   "version": "0.1.1",
   "description": "Grail core analysis engine",
   "main": "dist/index.js",

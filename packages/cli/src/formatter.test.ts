@@ -1,5 +1,5 @@
 import { formatTree, formatDependencyGraph } from "./formatter";
-import type { ASTNode, DirectoryNode, FileNode, RootNode, Import } from "@grail/core";
+import type { ASTNode, DirectoryNode, FileNode, RootNode, Import } from "@grail-ai/core";
 
 function file(name: string, extension: string | null = null, imports: Import[] = []): FileNode {
   return { type: "file", name, extension, imports, symbols: [] };

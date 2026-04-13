@@ -1,6 +1,6 @@
 import http from "http";
 import { parseArgs, createRequestHandler } from "./server";
-import type { RootNode } from "@grail/core";
+import type { RootNode } from "@grail-ai/core";
 
 describe("parseArgs", () => {
   it("parses --path flag", () => {

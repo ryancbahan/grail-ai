@@ -1,5 +1,5 @@
 import type { Node, Tree } from "web-tree-sitter";
-import type { Symbol, SymbolKind } from "@grail/core";
+import type { Symbol, SymbolKind } from "@grail-ai/core";
 
 export function parseJavaScriptSymbols(
   _filePath: string,

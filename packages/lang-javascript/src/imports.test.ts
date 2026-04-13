@@ -1,5 +1,5 @@
 import { parseJavaScriptImports } from "./imports";
-import { registerLanguage, initLanguages, parseFile } from "@grail/core";
+import { registerLanguage, initLanguages, parseFile } from "@grail-ai/core";
 import { javascript } from "./index";
 
 function parse(content: string) {

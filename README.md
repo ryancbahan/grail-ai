@@ -37,10 +37,10 @@ All data commands output JSON.
 
 ```
 packages/
-├── core/              @grail/core              — AST engine, types, queries, grammar loader
-├── lang-javascript/   @grail/lang-javascript   — JS/TS via tree-sitter
-├── cli/               @grail/cli               — CLI interface
-└── web/               @grail/web               — Preact + D3 visualization
+├── core/              @grail-ai/core              — AST engine, types, queries, grammar loader
+├── lang-javascript/   @grail-ai/lang-javascript   — JS/TS via tree-sitter
+├── cli/               grail                       — CLI interface
+└── web/               @grail-ai/web               — Preact + D3 visualization
 ```
 
 ## Adding a Language
@@ -48,8 +48,8 @@ packages/
 Create a package that exports a `LanguageConfig`:
 
 ```ts
-import { registerLanguage } from "@grail/core";
-import { python } from "@grail/lang-python";
+import { registerLanguage } from "@grail-ai/core";
+import { python } from "@grail-ai/lang-python";
 
 registerLanguage(python);
 ```

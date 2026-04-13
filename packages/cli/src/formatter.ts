@@ -1,6 +1,6 @@
 import path from "path";
-import { collectFiles, findCircularDependencies } from "@grail/core";
-import type { ASTNode, FileNode, Symbol, SymbolKind, RootNode } from "@grail/core";
+import { collectFiles, findCircularDependencies } from "@grail-ai/core";
+import type { ASTNode, FileNode, Symbol, SymbolKind, RootNode } from "@grail-ai/core";
 
 const KIND_PREFIX: Record<SymbolKind, string> = {
   function: "fn",

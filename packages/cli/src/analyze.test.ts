@@ -1,8 +1,8 @@
 import fs from "fs";
 import path from "path";
 import os from "os";
-import { analyze, initAnalyzer, registerLanguage } from "@grail/core";
-import { javascript } from "@grail/lang-javascript";
+import { analyze, initAnalyzer, registerLanguage } from "@grail-ai/core";
+import { javascript } from "@grail-ai/lang-javascript";
 
 let tmpDir: string;
 

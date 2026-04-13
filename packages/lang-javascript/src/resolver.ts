@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import { ResolveContext } from "@grail/core";
+import { ResolveContext } from "@grail-ai/core";
 
 const JS_EXTENSIONS = [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"];
 

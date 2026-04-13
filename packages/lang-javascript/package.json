@@ -1,5 +1,5 @@
 {
-  "name": "@grail/lang-javascript",
+  "name": "@grail-ai/lang-javascript",
   "version": "0.1.1",
   "description": "JavaScript/TypeScript language support for Grail",
   "main": "dist/index.js",
@@ -9,7 +9,7 @@
     "test": "jest"
   },
   "dependencies": {
-    "@grail/core": "*",
+    "@grail-ai/core": "*",
     "tree-sitter-javascript": "^0.25.0",
     "tree-sitter-typescript": "^0.23.2"
   },

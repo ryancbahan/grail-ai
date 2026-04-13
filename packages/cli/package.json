@@ -12,8 +12,8 @@
     "grail": "ts-node src/index.ts"
   },
   "dependencies": {
-    "@grail/core": "*",
-    "@grail/lang-javascript": "*"
+    "@grail-ai/core": "*",
+    "@grail-ai/lang-javascript": "*"
   },
   "devDependencies": {
     "@types/jest": "^30.0.0",

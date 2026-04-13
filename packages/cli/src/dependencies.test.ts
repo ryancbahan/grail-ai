@@ -7,10 +7,10 @@ import {
   collectFiles,
   registerLanguage,
   initLanguages,
-} from "@grail/core";
-import type { RootNode } from "@grail/core";
-import { javascript } from "@grail/lang-javascript";
-import { clearResolverCache } from "@grail/lang-javascript";
+} from "@grail-ai/core";
+import type { RootNode } from "@grail-ai/core";
+import { javascript } from "@grail-ai/lang-javascript";
+import { clearResolverCache } from "@grail-ai/lang-javascript";
 
 beforeAll(async () => {
   registerLanguage(javascript);

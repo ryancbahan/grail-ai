@@ -12,9 +12,9 @@ import {
   findCircularDependencies,
   collectFiles,
   readSymbol,
-} from "@grail/core";
-import type { FileNode, Symbol as GrailSymbol } from "@grail/core";
-import { javascript } from "@grail/lang-javascript";
+} from "@grail-ai/core";
+import type { FileNode, Symbol as GrailSymbol } from "@grail-ai/core";
+import { javascript } from "@grail-ai/lang-javascript";
 import { formatTree } from "./formatter";
 
 registerLanguage(javascript);

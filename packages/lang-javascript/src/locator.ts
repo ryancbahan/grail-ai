@@ -1,5 +1,5 @@
 import type { Node, Tree } from "web-tree-sitter";
-import type { SymbolLocation } from "@grail/core";
+import type { SymbolLocation } from "@grail-ai/core";
 
 export function locateJavaScriptSymbol(
   filePath: string,

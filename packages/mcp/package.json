@@ -1,5 +1,5 @@
 {
-  "name": "@grail/mcp",
+  "name": "@grail-ai/mcp",
   "version": "0.1.1",
   "description": "Grail MCP server — codebase analysis for AI agents",
   "type": "module",
