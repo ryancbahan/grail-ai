@@ -98,6 +98,24 @@ server.registerTool("grail_cycles", {
   },
 }, async ({ path: p, depth }) => text(grail(`${p} cycles${depthFlag(depth)}`)));
 
+server.registerTool("grail_calls", {
+  description: "Show what a function calls, with resolved signatures from the target functions. Uses TypeScript compiler for accurate resolution.",
+  inputSchema: {
+    path: z.string().describe("Path to the project directory"),
+    file: z.string().describe("Relative path to the file"),
+    symbol: z.string().describe("Name of the function/method"),
+  },
+}, async ({ path: p, file, symbol }) => text(grail(`${p} calls ${file} ${symbol}`)));
+
+server.registerTool("grail_callers", {
+  description: "Show what calls a given function. Uses TypeScript compiler for accurate resolution.",
+  inputSchema: {
+    path: z.string().describe("Path to the project directory"),
+    file: z.string().describe("Relative path to the file"),
+    symbol: z.string().describe("Name of the function/method"),
+  },
+}, async ({ path: p, file, symbol }) => text(grail(`${p} callers ${file} ${symbol}`)));
+
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);

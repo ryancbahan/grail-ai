@@ -17,6 +17,8 @@ Available via MCP or CLI. Both return identical JSON. Use `--depth <n>` to limit
 | Summary | `grail_summary { path, file? }` | `npx grail-ai <path> summary [file]` |
 | Dependencies | `grail_dependencies { path, file }` | `npx grail-ai <path> dependencies <file>` |
 | Dependents | `grail_dependents { path, file }` | `npx grail-ai <path> dependents <file>` |
+| Calls | `grail_calls { path, file, symbol }` | `npx grail-ai <path> calls <file> <symbol>` |
+| Callers | `grail_callers { path, file, symbol }` | `npx grail-ai <path> callers <file> <symbol>` |
 | Read symbol | `grail_read { path, file, symbol, parent? }` | `npx grail-ai <path> read <file> <symbol>` |
 | Externals | `grail_externals { path, file? }` | `npx grail-ai <path> externals [file]` |
 | Entry points | `grail_entry_points { path }` | `npx grail-ai <path> entry-points` |
@@ -34,7 +36,14 @@ For relevant files:
 - `grail_dependencies` — see what it imports, with resolved function signatures from those files. Understand the API contracts without reading the dependency.
 - `grail_dependents` — see what imports this file and which symbols they consume. Check this before making changes.
 
-### 3. Read (surgical)
+### 3. Call graph (function-level)
+When you need to understand function-to-function relationships:
+- `grail_calls` — what does this function call? Returns callees with their signatures.
+- `grail_callers` — what calls this function? Function-level blast radius.
+
+These use the TypeScript compiler for accurate resolution (not heuristic name matching).
+
+### 4. Read (surgical)
 Only when signatures aren't enough, use `grail_read` to get a specific symbol's source code. Not the whole file — just the function or type.
 
 ## Rules
@@ -42,5 +51,5 @@ Only when signatures aren't enough, use `grail_read` to get a specific symbol's 
 - **Start with summary** before reading any files
 - **Use depth on large codebases** — `--depth 2` first, then deeper into relevant areas
 - **Prefer signatures over source** — if summary or dependencies gives you enough, don't read the source
-- **Check dependents before editing** — always check what would break
+- **Check dependents before editing** — use `dependents` for file-level and `callers` for function-level blast radius
 - **Never read a full file** when grail can give you just the symbol you need

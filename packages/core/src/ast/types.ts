@@ -31,12 +31,19 @@ export type SymbolKind =
 
 export type SymbolVisibility = "public" | "private" | "protected" | "internal";
 
+export interface SymbolRef {
+  file: string;
+  name: string;
+  parent?: string;
+}
+
 export interface Symbol {
   name: string;
   kind: SymbolKind;
   signature: string;
   visibility: SymbolVisibility;
   parent?: string;
+  calls?: SymbolRef[];
 }
 
 interface BaseNode {

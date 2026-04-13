@@ -11,6 +11,9 @@ import {
   findCircularDependencies,
   collectFiles,
   readSymbol,
+  buildCallGraph,
+  callsOf,
+  callersOf,
 } from "@grail-ai/core";
 import type { FileNode, Symbol as GrailSymbol } from "@grail-ai/core";
 import { javascript } from "@grail-ai/lang-javascript";
@@ -30,6 +33,8 @@ Usage:
   grail <path> entry-points             Files nothing imports
   grail <path> cycles                   Circular dependencies
   grail <path> files                    List all file paths
+  grail <path> calls <file> <symbol>     What does this function call (with signatures)
+  grail <path> callers <file> <symbol>  What calls this function
   grail <path> read <file> <symbol>      Read a symbol's source code
   grail <path> json                     Full AST as JSON
 
@@ -104,7 +109,7 @@ async function main() {
         }
         console.log(JSON.stringify({
           file: rel(filePath),
-          symbols: file.node.symbols.filter((s) => s.visibility === "public"),
+          symbols: file.node.symbols,
           imports: file.node.imports.map((imp) => ({
             specifier: imp.specifier,
             kind: imp.kind,
@@ -117,8 +122,8 @@ async function main() {
         const result = allFiles.map(({ filePath, node }) => ({
           file: rel(filePath),
           symbols: node.symbols
-            .filter((s) => s.visibility === "public" && !s.parent)
-            .map((s) => ({ name: s.name, kind: s.kind, signature: s.signature })),
+            .filter((s) => !s.parent)
+            .map((s) => ({ name: s.name, kind: s.kind, signature: s.signature, visibility: s.visibility })),
           dependencies: node.imports.filter((i) => !i.isExternal).length,
           externals: [...new Set(node.imports.filter((i) => i.isExternal).map((i) => i.specifier))],
         }));
@@ -222,6 +227,66 @@ async function main() {
     case "files": {
       const files = allFiles.map((f) => rel(f.filePath));
       console.log(JSON.stringify({ files }, null, 2));
+      break;
+    }
+
+    case "calls": {
+      if (!commandArg || !filteredArgs[3]) {
+        console.error("Usage: grail <path> calls <file> <symbol>");
+        process.exit(1);
+      }
+      if (!language) {
+        console.log(JSON.stringify({ error: "No language detected", suggestion: "Ensure the project has recognizable marker files or source files" }));
+        break;
+      }
+      if (!language.implementation.buildCallGraph) {
+        console.log(JSON.stringify({
+          error: "Call graph not available",
+          reason: `The ${language.descriptor.name} language plugin does not support call resolution`,
+          suggestion: "Use 'dependencies' and 'dependents' for file-level relationships",
+        }));
+        break;
+      }
+      await buildCallGraph(root, language);
+      const callResults = callsOf(root, commandArg, filteredArgs[3]);
+      // Enrich with signatures from target files
+      const enrichedCalls = callResults.map((c) => {
+        const targetFile = allFiles.find((f) => f.filePath === path.resolve(root.absolutePath, c.file));
+        const targetSym = targetFile?.node.symbols.find((s) => s.name === c.name && s.parent === c.parent);
+        return { ...c, signature: targetSym?.signature ?? null };
+      });
+      console.log(JSON.stringify({
+        file: commandArg,
+        symbol: filteredArgs[3],
+        calls: enrichedCalls,
+      }, null, 2));
+      break;
+    }
+
+    case "callers": {
+      if (!commandArg || !filteredArgs[3]) {
+        console.error("Usage: grail <path> callers <file> <symbol>");
+        process.exit(1);
+      }
+      if (!language) {
+        console.log(JSON.stringify({ error: "No language detected", suggestion: "Ensure the project has recognizable marker files or source files" }));
+        break;
+      }
+      if (!language.implementation.buildCallGraph) {
+        console.log(JSON.stringify({
+          error: "Call graph not available",
+          reason: `The ${language.descriptor.name} language plugin does not support call resolution`,
+          suggestion: "Use 'dependencies' and 'dependents' for file-level relationships",
+        }));
+        break;
+      }
+      await buildCallGraph(root, language);
+      const callerResults = callersOf(root, commandArg, filteredArgs[3]);
+      console.log(JSON.stringify({
+        file: commandArg,
+        symbol: filteredArgs[3],
+        callers: callerResults,
+      }, null, 2));
       break;
     }
 

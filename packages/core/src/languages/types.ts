@@ -1,4 +1,4 @@
-import { TreeOptions, Import, ImportedSymbol, Symbol, SymbolLocation } from "../ast/types";
+import { TreeOptions, Import, ImportedSymbol, Symbol, SymbolLocation, FileEntry } from "../ast/types";
 
 export interface ResolveContext {
   containingFile: string;
@@ -23,6 +23,7 @@ export interface LanguageImplementation {
   resolveImport: (specifier: string, context: ResolveContext) => string | null;
   locateSymbol: (filePath: string, content: string, tree: unknown, symbolName: string, parentName?: string) => SymbolLocation | null;
   inferDependencies?: (filePath: string, content: string, context: ResolveContext) => ParsedImport[];
+  buildCallGraph?: (projectRoot: string, files: FileEntry[]) => Promise<void>;
 }
 
 export interface LanguageDescriptor {

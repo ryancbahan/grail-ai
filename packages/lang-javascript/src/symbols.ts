@@ -34,7 +34,7 @@ function visitSymbols(
 
     const declaration = node.childForFieldName("declaration");
     if (declaration) {
-      handleDeclaration(declaration, add);
+      handleDeclaration(declaration, "public", add);
       return;
     }
 
@@ -64,6 +64,17 @@ function visitSymbols(
     return;
   }
 
+  // Non-exported top-level declarations
+  const declarationTypes = [
+    "function_declaration", "generator_function_declaration",
+    "class_declaration", "lexical_declaration",
+    "type_alias_declaration", "interface_declaration", "enum_declaration",
+  ];
+  if (declarationTypes.includes(node.type)) {
+    handleDeclaration(node, "internal", add);
+    return;
+  }
+
   for (let i = 0; i < node.childCount; i++) {
     const child = node.child(i);
     if (child) visitSymbols(child, add);
@@ -85,6 +96,7 @@ function extractSignature(node: Node, bodyType: string): string {
 
 function handleDeclaration(
   declaration: Node,
+  visibility: Symbol["visibility"],
   add: (sym: Symbol) => void
 ): void {
   switch (declaration.type) {
@@ -93,9 +105,9 @@ function handleDeclaration(
       const name = declaration.childForFieldName("name");
       const sig = extractSignature(declaration, "statement_block");
       if (name) {
-        add({ name: name.text, kind: "function", signature: sig, visibility: "public" });
+        add({ name: name.text, kind: "function", signature: sig, visibility });
       } else {
-        add({ name: "default", kind: "default", signature: sig, visibility: "public" });
+        add({ name: "default", kind: "default", signature: sig, visibility });
       }
       break;
     }
@@ -105,7 +117,7 @@ function handleDeclaration(
       const className = name?.text ?? "default";
       const sig = extractSignature(declaration, "class_body");
       const kind: SymbolKind = name ? "class" : "default";
-      add({ name: className, kind, signature: sig, visibility: "public" });
+      add({ name: className, kind, signature: sig, visibility });
 
       // Extract class members
       const body = declaration.childForFieldName("body");
@@ -120,12 +132,11 @@ function handleDeclaration(
         if (child.type === "variable_declarator") {
           const name = child.childForFieldName("name");
           if (name) {
-            // Signature: text before = assignment
             const eqIndex = child.text.indexOf("=");
             const sig = eqIndex > 0
               ? child.text.slice(0, eqIndex).trim()
               : child.text;
-            add({ name: name.text, kind: "variable", signature: sig, visibility: "public" });
+            add({ name: name.text, kind: "variable", signature: sig, visibility });
           }
         }
       }
@@ -135,7 +146,7 @@ function handleDeclaration(
     case "type_alias_declaration": {
       const name = declaration.childForFieldName("name");
       if (name) {
-        add({ name: name.text, kind: "type", signature: declaration.text.replace(/;$/, "").trim(), visibility: "public" });
+        add({ name: name.text, kind: "type", signature: declaration.text.replace(/;$/, "").trim(), visibility });
       }
       break;
     }
@@ -143,7 +154,7 @@ function handleDeclaration(
     case "interface_declaration": {
       const name = declaration.childForFieldName("name");
       if (name) {
-        add({ name: name.text, kind: "interface", signature: declaration.text.replace(/;$/, "").trim(), visibility: "public" });
+        add({ name: name.text, kind: "interface", signature: declaration.text.replace(/;$/, "").trim(), visibility });
       }
       break;
     }
@@ -151,13 +162,13 @@ function handleDeclaration(
     case "enum_declaration": {
       const name = declaration.childForFieldName("name");
       if (name) {
-        add({ name: name.text, kind: "enum", signature: declaration.text.replace(/;$/, "").trim(), visibility: "public" });
+        add({ name: name.text, kind: "enum", signature: declaration.text.replace(/;$/, "").trim(), visibility });
       }
       break;
     }
 
     default: {
-      add({ name: "default", kind: "default", signature: "default", visibility: "public" });
+      add({ name: "default", kind: "default", signature: "default", visibility });
       break;
     }
   }
