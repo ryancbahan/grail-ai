@@ -1,13 +1,9 @@
 import path from "path";
 import { buildTree } from "./ast/builder";
 import { buildDependencyGraph } from "./ast/dependencies";
-import { detectLanguage, initLanguages } from "./languages";
+import { detectLanguage, loadLanguage } from "./languages";
 import { RootNode, TreeOptions } from "./ast/types";
-import { LanguageConfig } from "./languages/types";
-
-export async function initAnalyzer(): Promise<void> {
-  await initLanguages();
-}
+import { Language } from "./languages/types";
 
 export interface AnalyzeOptions {
   depth?: number;
@@ -15,15 +11,20 @@ export interface AnalyzeOptions {
 
 export interface AnalysisResult {
   root: RootNode;
-  language: LanguageConfig | undefined;
+  language: Language | undefined;
 }
 
-export function analyze(dirPath: string, options: AnalyzeOptions = {}): AnalysisResult {
+export async function analyze(dirPath: string, options: AnalyzeOptions = {}): Promise<AnalysisResult> {
   const resolved = path.resolve(dirPath);
-  const language = detectLanguage(resolved);
+  const descriptor = detectLanguage(resolved);
+
+  let language: Language | undefined;
+  if (descriptor) {
+    language = await loadLanguage(descriptor);
+  }
 
   const treeOptions: TreeOptions = {
-    ...language?.treeOptions,
+    ...descriptor?.treeOptions,
     ...(options.depth !== undefined ? { depth: options.depth } : {}),
   };
 

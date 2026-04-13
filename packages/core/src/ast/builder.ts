@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import { ASTNode, RootNode, TreeOptions } from "./types";
+import { ASTNode, DirectoryNode, RootNode, TreeOptions } from "./types";
 
 export const DEFAULT_IGNORE = [
   ".git",
@@ -12,7 +12,10 @@ export function buildTree(dirPath: string, options: TreeOptions = {}): RootNode 
   const maxDepth = options.depth ?? Infinity;
   const resolved = path.resolve(dirPath);
   const tree = buildNode(resolved, ignored, 0, maxDepth);
-  return { type: "root", absolutePath: resolved, tree: tree as any, externals: [] };
+  if (tree.type !== "directory") {
+    throw new Error(`Expected directory at ${resolved}, got file`);
+  }
+  return { type: "root", absolutePath: resolved, tree, externals: [] };
 }
 
 function buildNode(dirPath: string, ignored: Set<string>, currentDepth: number, maxDepth: number): ASTNode {

@@ -3,11 +3,11 @@ import path from "path";
 import { SymbolLocation, RootNode } from "./types";
 import { collectFiles } from "./walker";
 import { parseFile } from "../languages/grammar-loader";
-import { LanguageConfig } from "../languages/types";
+import { Language } from "../languages/types";
 
 export function readSymbol(
   root: RootNode,
-  lang: LanguageConfig,
+  lang: Language,
   targetFile: string,
   symbolName: string,
   parentName?: string
@@ -19,7 +19,7 @@ export function readSymbol(
   const file = collectFiles(root).find((f) => f.filePath === filePath);
   if (!file) return null;
 
-  if (!file.node.extension || !new Set(lang.extensions).has(file.node.extension)) {
+  if (!file.node.extension || !new Set(lang.descriptor.extensions).has(file.node.extension)) {
     return null;
   }
 
@@ -31,7 +31,7 @@ export function readSymbol(
   }
 
   const tree = parseFile(filePath, content);
-  const result = lang.locateSymbol(filePath, content, tree, symbolName, parentName);
+  const result = lang.implementation.locateSymbol(filePath, content, tree, symbolName, parentName);
 
   if (tree && typeof (tree as { delete?: () => void }).delete === "function") {
     (tree as { delete: () => void }).delete();

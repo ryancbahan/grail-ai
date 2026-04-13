@@ -1,14 +1,13 @@
 import fs from "fs";
 import path from "path";
 import os from "os";
-import { analyze, initAnalyzer, registerLanguage } from "@grail-ai/core";
+import { analyze, registerLanguage } from "@grail-ai/core";
 import { javascript } from "@grail-ai/lang-javascript";
 
 let tmpDir: string;
 
-beforeAll(async () => {
+beforeAll(() => {
   registerLanguage(javascript);
-  await initAnalyzer();
 });
 
 beforeEach(() => {
@@ -26,37 +25,37 @@ function writeFile(relativePath: string, content: string) {
 }
 
 describe("analyze", () => {
-  it("returns a RootNode with absolutePath", () => {
+  it("returns a RootNode with absolutePath", async () => {
     writeFile("index.ts", "const x = 1;\n");
-    const { root } = analyze(tmpDir);
+    const { root } = await analyze(tmpDir);
 
     expect(root.type).toBe("root");
     expect(root.absolutePath).toBe(tmpDir);
     expect(root.tree.type).toBe("directory");
   });
 
-  it("detects javascript when package.json is present", () => {
+  it("detects javascript when package.json is present", async () => {
     writeFile("package.json", "{}");
     writeFile("index.ts", "const x = 1;\n");
-    const { language } = analyze(tmpDir);
+    const { language } = await analyze(tmpDir);
 
     expect(language).toBeDefined();
-    expect(language!.name).toBe("javascript");
+    expect(language!.descriptor.name).toBe("javascript");
   });
 
-  it("returns undefined language for unknown projects", () => {
+  it("returns undefined language for unknown projects", async () => {
     writeFile("data.csv", "a,b,c\n");
-    const { language } = analyze(tmpDir);
+    const { language } = await analyze(tmpDir);
 
     expect(language).toBeUndefined();
   });
 
-  it("populates imports when language supports parsing", () => {
+  it("populates imports when language supports parsing", async () => {
     writeFile("package.json", "{}");
     writeFile("src/index.ts", 'import { helper } from "./utils";\n');
     writeFile("src/utils.ts", "export function helper() {}\n");
 
-    const { root } = analyze(tmpDir);
+    const { root } = await analyze(tmpDir);
 
     const src = root.tree.children.find((c) => c.name === "src");
     expect(src?.type).toBe("directory");
@@ -70,20 +69,20 @@ describe("analyze", () => {
     expect(indexFile.imports[0].specifier).toBe("./utils");
   });
 
-  it("populates externals on root", () => {
+  it("populates externals on root", async () => {
     writeFile("package.json", "{}");
     writeFile("index.ts", 'import fs from "fs";\nimport lodash from "lodash";\n');
 
-    const { root } = analyze(tmpDir);
+    const { root } = await analyze(tmpDir);
 
     expect(root.externals).toContain("fs");
     expect(root.externals).toContain("lodash");
   });
 
-  it("leaves imports empty when no language detected", () => {
+  it("leaves imports empty when no language detected", async () => {
     writeFile("data.csv", "a,b,c\n");
 
-    const { root } = analyze(tmpDir);
+    const { root } = await analyze(tmpDir);
 
     const file = root.tree.children.find((c) => c.name === "data.csv");
     if (file?.type === "file") {
@@ -91,30 +90,24 @@ describe("analyze", () => {
     }
   });
 
-  it("applies language-specific ignore paths", () => {
+  it("applies language-specific ignore paths", async () => {
     writeFile("package.json", "{}");
     writeFile("node_modules/pkg/index.js", "module.exports = {};\n");
     writeFile("src/index.ts", "const x = 1;\n");
 
-    const { root } = analyze(tmpDir);
+    const { root } = await analyze(tmpDir);
     const names = root.tree.children.map((c) => c.name);
 
     expect(names).not.toContain("node_modules");
     expect(names).toContain("src");
   });
 
-  it("resolves relative paths to absolute", () => {
+  it("resolves relative paths to absolute", async () => {
     writeFile("index.ts", "const x = 1;\n");
     const relative = path.relative(process.cwd(), tmpDir);
-    const { root } = analyze(relative);
+    const { root } = await analyze(relative);
 
     expect(path.isAbsolute(root.absolutePath)).toBe(true);
   });
 });
 
-describe("initAnalyzer", () => {
-  it("can be called multiple times without error", async () => {
-    await initAnalyzer();
-    await initAnalyzer();
-  });
-});

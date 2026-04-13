@@ -6,15 +6,17 @@ import {
   buildDependencyGraph,
   collectFiles,
   registerLanguage,
-  initLanguages,
+  loadLanguage,
 } from "@grail-ai/core";
-import type { RootNode } from "@grail-ai/core";
+import type { RootNode, Language } from "@grail-ai/core";
 import { javascript } from "@grail-ai/lang-javascript";
 import { clearResolverCache } from "@grail-ai/lang-javascript";
 
+let lang: Language;
+
 beforeAll(async () => {
   registerLanguage(javascript);
-  await initLanguages();
+  lang = await loadLanguage(javascript);
 });
 
 let tmpDir: string;
@@ -44,7 +46,7 @@ describe("buildDependencyGraph", () => {
     writeFile("src/utils.ts", "export function helper() {}\n");
 
     const root = buildTree(tmpDir, { ignorePaths: [] });
-    buildDependencyGraph(root, javascript);
+    buildDependencyGraph(root, lang);
 
     const indexFile = findFile(root, "src/index.ts");
     const utilsPath = path.join(tmpDir, "src", "utils.ts");
@@ -63,7 +65,7 @@ describe("buildDependencyGraph", () => {
     writeFile("src/utils.ts", "export function helper() {}\nexport const VERSION = 1;\n");
 
     const root = buildTree(tmpDir, { ignorePaths: [] });
-    buildDependencyGraph(root, javascript);
+    buildDependencyGraph(root, lang);
 
     const file = findFile(root, "src/utils.ts");
     expect(file).toBeDefined();
@@ -75,7 +77,7 @@ describe("buildDependencyGraph", () => {
     writeFile("src/standalone.ts", "const x = 1;\n");
 
     const root = buildTree(tmpDir, { ignorePaths: [] });
-    buildDependencyGraph(root, javascript);
+    buildDependencyGraph(root, lang);
 
     const file = findFile(root, "standalone.ts");
     expect(file).toBeDefined();
@@ -87,7 +89,7 @@ describe("buildDependencyGraph", () => {
     writeFile("index.ts", "const x = 1;\n");
 
     const root = buildTree(tmpDir, { ignorePaths: [] });
-    buildDependencyGraph(root, javascript);
+    buildDependencyGraph(root, lang);
 
     const cssFile = findFile(root, "styles.css");
     expect(cssFile!.node.imports).toEqual([]);
@@ -102,7 +104,7 @@ describe("buildDependencyGraph", () => {
     `);
 
     const root = buildTree(tmpDir, { ignorePaths: [] });
-    buildDependencyGraph(root, javascript);
+    buildDependencyGraph(root, lang);
 
     expect(root.externals).toContain("fs");
     expect(root.externals).toContain("lodash");
@@ -114,7 +116,7 @@ describe("buildDependencyGraph", () => {
     writeFile("b.ts", 'import { a } from "./a";\n');
 
     const root = buildTree(tmpDir, { ignorePaths: [] });
-    buildDependencyGraph(root, javascript);
+    buildDependencyGraph(root, lang);
 
     const aFile = findFile(root, "a.ts");
     const bFile = findFile(root, "b.ts");

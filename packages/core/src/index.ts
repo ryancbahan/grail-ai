@@ -25,8 +25,15 @@ export type {
   FileEntry,
   SymbolLocation,
 } from "./ast";
-export { registerLanguage, detectLanguage, initLanguages } from "./languages";
+export { registerLanguage, detectLanguage, loadLanguage } from "./languages";
 export { parseFile } from "./languages/grammar-loader";
-export type { LanguageConfig, ResolveContext, ParsedImport, GrammarMapping } from "./languages/types";
-export { analyze, initAnalyzer } from "./analyze";
+export type {
+  LanguageDescriptor,
+  LanguageImplementation,
+  Language,
+  ResolveContext,
+  ParsedImport,
+  GrammarMapping,
+} from "./languages/types";
+export { analyze } from "./analyze";
 export type { AnalysisResult, AnalyzeOptions } from "./analyze";

@@ -1,5 +1,5 @@
 import { parseJavaScriptSymbols } from "./symbols";
-import { registerLanguage, initLanguages, parseFile } from "@grail-ai/core";
+import { registerLanguage, loadLanguage, parseFile } from "@grail-ai/core";
 import { javascript } from "./index";
 
 function parse(content: string) {
@@ -13,7 +13,7 @@ function parse(content: string) {
 
 beforeAll(async () => {
   registerLanguage(javascript);
-  await initLanguages();
+  await loadLanguage(javascript);
 });
 
 describe("parseJavaScriptSymbols", () => {

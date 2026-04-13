@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import type { Parser, Language } from "web-tree-sitter";
-import { GrammarMapping, LanguageConfig } from "./types";
+import { GrammarMapping, LanguageDescriptor } from "./types";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const TreeSitter: {
@@ -10,9 +10,10 @@ const TreeSitter: {
 } = require("web-tree-sitter");
 
 let runtimeInitialized = false;
-let initPromise: Promise<void> | null = null;
+let runtimeInitPromise: Promise<void> | null = null;
 
 const parsersByExtension = new Map<string, Parser>();
+const loadedGrammarKeys = new Set<string>();
 
 function loadWasm(grammarPackage: string, wasmFile: string): Uint8Array {
   const dir = path.dirname(require.resolve(`${grammarPackage}/package.json`));
@@ -21,42 +22,43 @@ function loadWasm(grammarPackage: string, wasmFile: string): Uint8Array {
 
 async function initRuntime(): Promise<void> {
   if (runtimeInitialized) return;
-  await TreeSitter.Parser.init({
-    locateFile: (scriptName: string) =>
-      path.join(
-        path.dirname(require.resolve("web-tree-sitter")),
-        scriptName
-      ),
-  });
-  runtimeInitialized = true;
-}
+  if (runtimeInitPromise) return runtimeInitPromise;
 
-async function loadGrammars(grammars: GrammarMapping[]): Promise<void> {
-  const loads = grammars.map(async (mapping) => {
-    const wasm = loadWasm(mapping.grammarPackage, mapping.wasmFile);
-    const lang = await TreeSitter.Language.load(wasm);
-    const parser = new TreeSitter.Parser();
-    parser.setLanguage(lang);
-
-    for (const ext of mapping.extensions) {
-      parsersByExtension.set(ext, parser);
-    }
-  });
-
-  await Promise.all(loads);
-}
-
-export async function initGrammars(languages: LanguageConfig[]): Promise<void> {
-  if (initPromise) return initPromise;
-
-  initPromise = (async () => {
-    await initRuntime();
-
-    const allGrammars = languages.flatMap((lang) => lang.grammars);
-    await loadGrammars(allGrammars);
+  runtimeInitPromise = (async () => {
+    await TreeSitter.Parser.init({
+      locateFile: (scriptName: string) =>
+        path.join(
+          path.dirname(require.resolve("web-tree-sitter")),
+          scriptName
+        ),
+    });
+    runtimeInitialized = true;
   })();
 
-  return initPromise;
+  return runtimeInitPromise;
+}
+
+async function loadGrammar(mapping: GrammarMapping): Promise<void> {
+  const key = `${mapping.grammarPackage}:${mapping.wasmFile}`;
+  if (loadedGrammarKeys.has(key)) return;
+
+  const wasm = loadWasm(mapping.grammarPackage, mapping.wasmFile);
+  const lang = await TreeSitter.Language.load(wasm);
+  const parser = new TreeSitter.Parser();
+  parser.setLanguage(lang);
+
+  for (const ext of mapping.extensions) {
+    parsersByExtension.set(ext, parser);
+  }
+
+  loadedGrammarKeys.add(key);
+}
+
+export async function initGrammars(languages: LanguageDescriptor[]): Promise<void> {
+  await initRuntime();
+
+  const grammars = languages.flatMap((lang) => lang.grammars);
+  await Promise.all(grammars.map(loadGrammar));
 }
 
 export function getParser(filePath: string): Parser {

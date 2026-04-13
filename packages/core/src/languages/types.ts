@@ -17,15 +17,24 @@ export interface GrammarMapping {
   wasmFile: string;
 }
 
-export interface LanguageConfig {
-  name: string;
-  extensions: string[];
-  markers: string[];
-  treeOptions: TreeOptions;
-  grammars: GrammarMapping[];
+export interface LanguageImplementation {
   parseImports: (filePath: string, content: string, tree: unknown) => ParsedImport[];
   parseSymbols: (filePath: string, content: string, tree: unknown) => Symbol[];
   resolveImport: (specifier: string, context: ResolveContext) => string | null;
   locateSymbol: (filePath: string, content: string, tree: unknown, symbolName: string, parentName?: string) => SymbolLocation | null;
   inferDependencies?: (filePath: string, content: string, context: ResolveContext) => ParsedImport[];
+}
+
+export interface LanguageDescriptor {
+  name: string;
+  extensions: string[];
+  markers: string[];
+  treeOptions: TreeOptions;
+  grammars: GrammarMapping[];
+  load: () => Promise<LanguageImplementation>;
+}
+
+export interface Language {
+  descriptor: LanguageDescriptor;
+  implementation: LanguageImplementation;
 }
