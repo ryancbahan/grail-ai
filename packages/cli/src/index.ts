@@ -64,6 +64,11 @@ function lookupSymbol(
   return file.node.symbols.find((s) => s.name === symbolName);
 }
 
+function fail(error: string, suggestion?: string): never {
+  console.log(JSON.stringify({ error, ...(suggestion ? { suggestion } : {}) }));
+  process.exit(1);
+}
+
 async function main() {
   const args = process.argv.slice(2);
 
@@ -103,10 +108,7 @@ async function main() {
       if (commandArg) {
         const filePath = resolveFile(root.absolutePath, commandArg);
         const file = findFileNode(allFiles, filePath);
-        if (!file) {
-          console.error(`File not found: ${commandArg}`);
-          process.exit(1);
-        }
+        if (!file) fail(`File not found: ${commandArg}`, "Check the file path is relative to the project root");
         console.log(JSON.stringify({
           file: rel(filePath),
           symbols: file.node.symbols,
@@ -133,16 +135,10 @@ async function main() {
     }
 
     case "dependencies": {
-      if (!commandArg) {
-        console.error("Usage: grail <path> dependencies <file>");
-        process.exit(1);
-      }
+      if (!commandArg) fail("Missing file argument", "Usage: grail <path> dependencies <file>");
       const filePath = resolveFile(root.absolutePath, commandArg);
       const file = findFileNode(allFiles, filePath);
-      if (!file) {
-        console.error(`File not found: ${commandArg}`);
-        process.exit(1);
-      }
+      if (!file) fail(`File not found: ${commandArg}`, "Check the file path is relative to the project root");
 
       const result = file.node.imports.map((imp) => {
         const resolvedSymbols = imp.symbols.map((s) => {
@@ -175,10 +171,7 @@ async function main() {
     }
 
     case "dependents": {
-      if (!commandArg) {
-        console.error("Usage: grail <path> dependents <file>");
-        process.exit(1);
-      }
+      if (!commandArg) fail("Missing file argument", "Usage: grail <path> dependents <file>");
       const filePath = resolveFile(root.absolutePath, commandArg);
       const depPaths = dependentsOf(root, filePath);
 
@@ -209,10 +202,7 @@ async function main() {
       if (commandArg) {
         const filePath = resolveFile(root.absolutePath, commandArg);
         const file = findFileNode(allFiles, filePath);
-        if (!file) {
-          console.error(`File not found: ${commandArg}`);
-          process.exit(1);
-        }
+        if (!file) fail(`File not found: ${commandArg}`, "Check the file path is relative to the project root");
         const exts = [...new Set(file.node.imports.filter((i) => i.isExternal).map((i) => i.specifier))];
         console.log(JSON.stringify({ file: rel(filePath), externals: exts }, null, 2));
       } else {
@@ -240,10 +230,7 @@ async function main() {
     }
 
     case "calls": {
-      if (!commandArg || !filteredArgs[3]) {
-        console.error("Usage: grail <path> calls <file> <symbol>");
-        process.exit(1);
-      }
+      if (!commandArg || !filteredArgs[3]) fail("Missing file or symbol argument", "Usage: grail <path> calls <file> <symbol>");
       if (!language) {
         console.log(JSON.stringify({ error: "No language detected", suggestion: "Ensure the project has recognizable marker files or source files" }));
         break;
@@ -266,10 +253,7 @@ async function main() {
     }
 
     case "callers": {
-      if (!commandArg || !filteredArgs[3]) {
-        console.error("Usage: grail <path> callers <file> <symbol>");
-        process.exit(1);
-      }
+      if (!commandArg || !filteredArgs[3]) fail("Missing file or symbol argument", "Usage: grail <path> callers <file> <symbol>");
       if (!language) {
         console.log(JSON.stringify({ error: "No language detected", suggestion: "Ensure the project has recognizable marker files or source files" }));
         break;
@@ -292,26 +276,14 @@ async function main() {
     }
 
     case "read": {
-      if (!commandArg) {
-        console.error("Usage: grail <path> read <file> <symbol> [parent]");
-        process.exit(1);
-      }
+      if (!commandArg) fail("Missing file argument", "Usage: grail <path> read <file> <symbol> [parent]");
       const symbolName = filteredArgs[3];
       const parentName = filteredArgs[4];
-      if (!symbolName) {
-        console.error("Usage: grail <path> read <file> <symbol> [parent]");
-        process.exit(1);
-      }
-      if (!language) {
-        console.error("No language detected");
-        process.exit(1);
-      }
+      if (!symbolName) fail("Missing symbol argument", "Usage: grail <path> read <file> <symbol> [parent]");
+      if (!language) fail("No language detected", "Ensure the project has recognizable marker files or source files");
       const filePath = resolveFile(root.absolutePath, commandArg);
       const location = readSymbol(root, language, filePath, symbolName, parentName);
-      if (!location) {
-        console.error(`Symbol not found: ${symbolName} in ${commandArg}`);
-        process.exit(1);
-      }
+      if (!location) fail(`Symbol not found: ${symbolName} in ${commandArg}`, "Check the symbol name and file path");
       // Look up the symbol for signature/visibility
       const fileNode = findFileNode(allFiles, filePath);
       const symData = fileNode?.node.symbols.find((s) => s.name === symbolName && s.parent === parentName);
@@ -334,15 +306,23 @@ async function main() {
       break;
     }
 
-    default: {
-      console.error(`Unknown command: ${command}\n`);
-      console.log(HELP);
-      process.exit(1);
-    }
+    default:
+      fail(`Unknown command: ${command}`, `Run with --help to see available commands`);
   }
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
+main().catch((err: unknown) => {
+  const nodeErr = err as NodeJS.ErrnoException;
+  const message = err instanceof Error ? err.message : String(err);
+
+  if (nodeErr.code === "ENOENT") {
+    fail(`Path not found: ${nodeErr.path ?? "unknown"}`, "Check the path exists");
+  } else if (nodeErr.code === "ENOTDIR") {
+    fail(`Expected a directory: ${nodeErr.path ?? "unknown"}`, "Pass a project directory as the first argument");
+  } else if (nodeErr.code === "EACCES") {
+    fail(`Permission denied: ${nodeErr.path ?? "unknown"}`, "Check file permissions");
+  } else {
+    console.log(JSON.stringify({ error: message }));
+    process.exit(1);
+  }
 });
