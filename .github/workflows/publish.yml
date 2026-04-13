@@ -34,8 +34,7 @@ jobs:
             packages/*/package.json \
             packages/*/src \
             package.json \
-            README.md \
-            LICENSE
+            README.md
 
       - name: Upload release artifact
         env:
