@@ -1,37 +1,13 @@
 {
   "name": "grail",
-  "version": "1.0.0",
-  "description": "A codebase analyzer CLI",
-  "main": "dist/cli/index.js",
-  "bin": {
-    "grail": "dist/cli/index.js"
-  },
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
-    "build": "tsc",
-    "grail": "ts-node src/cli/index.ts",
-    "ui": "ts-node src/web/server.ts",
-    "start": "node dist/cli/index.js",
-    "test": "jest"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
-  "devDependencies": {
-    "@types/jest": "^30.0.0",
-    "@types/node": "^25.6.0",
-    "jest": "^30.3.0",
-    "ts-jest": "^29.4.9",
-    "ts-node": "^10.9.2",
-    "typescript": "^6.0.2"
-  },
-  "dependencies": {
-    "@types/d3": "^7.4.3",
-    "d3": "^7.9.0",
-    "esbuild": "^0.28.0",
-    "preact": "^10.29.1",
-    "tree-sitter-javascript": "^0.25.0",
-    "tree-sitter-typescript": "^0.23.2",
-    "web-tree-sitter": "^0.26.8"
+    "build": "npm run build --workspaces",
+    "test": "npm test --workspaces",
+    "grail": "npm run grail -w packages/cli --",
+    "ui": "npm run ui -w packages/web --"
   }
 }

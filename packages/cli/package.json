@@ -1,0 +1,26 @@
+{
+  "name": "@grail/cli",
+  "version": "1.0.0",
+  "description": "Grail CLI - codebase analyzer",
+  "main": "dist/index.js",
+  "bin": {
+    "grail": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "jest",
+    "grail": "ts-node src/index.ts"
+  },
+  "dependencies": {
+    "@grail/core": "*",
+    "@grail/lang-javascript": "*"
+  },
+  "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "@types/node": "^25.6.0",
+    "jest": "^30.3.0",
+    "ts-jest": "^29.4.9",
+    "ts-node": "^10.9.2",
+    "typescript": "^6.0.2"
+  }
+}
