@@ -7,23 +7,47 @@ const JS_APP = path.resolve(__dirname, "../test-examples/js/sample-app");
 // ── Basic Commands ──────────────────────────────────────────────
 
 describe("e2e: tree", () => {
-  it("outputs correct file structure with connectors", () => {
-    const output = grail(`${TS_APP} tree`);
-    expect(output).toContain("sample-app/");
-    expect(output).toContain("├──");
-    expect(output).toContain("└──");
-    expect(output).toContain("src/");
-    expect(output).toContain("index.ts");
-    expect(output).toContain("utils.ts");
-    expect(output).toContain("types.ts");
-    expect(output).toContain("service.ts");
-    expect(output).toContain("package.json");
+  it("outputs JSON with root, language, and tree structure", () => {
+    const result = json(`${TS_APP} tree`);
+    expect(result.root).toBe(TS_APP);
+    expect(result.language).toBe("javascript");
+    expect(result.tree.name).toBe("sample-app");
+    expect(result.tree.type).toBe("directory");
+    expect(Array.isArray(result.tree.children)).toBe(true);
+  });
+
+  it("contains all expected files and directories", () => {
+    const result = json(`${TS_APP} tree`);
+    const src = result.tree.children.find((c: any) => c.name === "src");
+    expect(src).toBeDefined();
+    expect(src.type).toBe("directory");
+
+    const srcNames = src.children.map((c: any) => c.name).sort();
+    expect(srcNames).toEqual(["index.ts", "service.ts", "types.ts", "utils.ts"]);
+
+    const pkg = result.tree.children.find((c: any) => c.name === "package.json");
+    expect(pkg).toBeDefined();
+    expect(pkg.type).toBe("file");
+    expect(pkg.extension).toBe(".json");
+  });
+
+  it("files have extension, directories have children", () => {
+    const result = json(`${TS_APP} tree`);
+    const src = result.tree.children.find((c: any) => c.name === "src");
+    const indexTs = src.children.find((c: any) => c.name === "index.ts");
+    expect(indexTs.type).toBe("file");
+    expect(indexTs.extension).toBe(".ts");
+    expect(indexTs).not.toHaveProperty("children");
+
+    expect(src.type).toBe("directory");
+    expect(src).not.toHaveProperty("extension");
   });
 
   it("does not include node_modules or .git", () => {
-    const output = grail(`${TS_APP} tree`);
-    expect(output).not.toContain("node_modules");
-    expect(output).not.toContain(".git");
+    const result = json(`${TS_APP} tree`);
+    const names = result.tree.children.map((c: any) => c.name);
+    expect(names).not.toContain("node_modules");
+    expect(names).not.toContain(".git");
   });
 });
 
@@ -356,11 +380,12 @@ describe("e2e: depth", () => {
     expect(files).not.toContain("src/index.ts");
   });
 
-  it("tree --depth 1 shows directories without contents", () => {
-    const output = grail(`${TS_APP} tree --depth 1`);
-    expect(output).toContain("src/");
-    expect(output).not.toContain("index.ts");
-    expect(output).not.toContain("utils.ts");
+  it("tree --depth 1 shows directories as empty", () => {
+    const result = json(`${TS_APP} tree --depth 1`);
+    const src = result.tree.children.find((c: any) => c.name === "src");
+    expect(src).toBeDefined();
+    expect(src.type).toBe("directory");
+    expect(src.children).toEqual([]);
   });
 
   it("no depth flag shows full depth", () => {
@@ -440,8 +465,8 @@ describe("e2e: errors", () => {
 
 describe("e2e: JS files", () => {
   it("detects language from package.json", () => {
-    const output = grail(`${JS_APP} tree`);
-    expect(output).toContain("Detected language: javascript");
+    const result = json(`${JS_APP} tree`);
+    expect(result.language).toBe("javascript");
   });
 
   it("summary shows JS symbols", () => {

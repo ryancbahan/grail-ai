@@ -17,7 +17,6 @@ import {
 } from "@grail-ai/core";
 import type { FileNode, Symbol as GrailSymbol } from "@grail-ai/core";
 import { javascript } from "@grail-ai/lang-javascript";
-import { formatTree } from "./formatter";
 
 registerLanguage(javascript);
 
@@ -99,8 +98,21 @@ async function main() {
 
   switch (command) {
     case "tree": {
-      if (language) console.log(`Detected language: ${language.descriptor.name}\n`);
-      console.log(formatTree(root.tree));
+      function toTreeJson(node: any): any {
+        if (node.type === "file") {
+          return { name: node.name, type: "file", extension: node.extension };
+        }
+        return {
+          name: node.name,
+          type: "directory",
+          children: node.children.map(toTreeJson),
+        };
+      }
+      console.log(JSON.stringify({
+        root: root.absolutePath,
+        language: language?.descriptor.name ?? null,
+        tree: toTreeJson(root.tree),
+      }, null, 2));
       break;
     }
 
