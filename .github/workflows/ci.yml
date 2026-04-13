@@ -18,5 +18,9 @@ jobs:
           node-version: ${{ matrix.node-version }}
           cache: npm
       - run: npm install
-      - run: npm run build
+      - run: npm run build -w packages/core
+      - run: npm run build -w packages/lang-javascript
+      - run: npm run build -w packages/cli
+      - run: npm run build -w packages/web
+      - run: npm run build -w packages/mcp
       - run: npm test

@@ -18,63 +18,69 @@ function grail(args: string): string {
   }
 }
 
-const server = new McpServer({
-  name: "grail",
-  version: "1.0.0",
-});
+function text(result: string) {
+  return { content: [{ type: "text" as const, text: result }] };
+}
 
-server.registerTool(
-  "grail_overview",
-  {
-    description:
-      "Scan a codebase and return its structure: every file with its exported symbols (with signatures), dependency counts, external packages, entry points, and circular dependencies. Use this first to understand what's in a project before drilling into specific files.",
-    inputSchema: {
-      path: z.string().describe("Path to the project directory"),
-    },
-  },
-  async ({ path: dirPath }) => ({
-    content: [{ type: "text" as const, text: grail(`${dirPath} summary`) }],
-  })
-);
+const server = new McpServer({ name: "grail", version: "0.1.0" });
 
-server.registerTool(
-  "grail_inspect",
-  {
-    description:
-      "Inspect a specific file in the codebase. Three query modes: 'dependencies' shows what the file imports with resolved function signatures from the target files. 'dependents' shows what files import this one and which symbols they consume. 'symbols' shows the file's full symbol list with signatures. Use this after grail_overview to understand a specific file's relationships.",
-    inputSchema: {
-      path: z.string().describe("Path to the project directory"),
-      file: z.string().describe("Relative path to the file within the project"),
-      query: z.enum(["dependencies", "dependents", "symbols"]).describe("What to inspect"),
-    },
+server.registerTool("grail_summary", {
+  description: "List all files with their exported symbols (with signatures), dependency counts, and external packages. Optionally pass a file for detailed single-file view.",
+  inputSchema: {
+    path: z.string().describe("Path to the project directory"),
+    file: z.string().optional().describe("Optional: relative path to a specific file"),
   },
-  async ({ path: dirPath, file, query }) => {
-    const cmd = query === "symbols"
-      ? `${dirPath} summary ${file}`
-      : `${dirPath} ${query} ${file}`;
-    return { content: [{ type: "text" as const, text: grail(cmd) }] };
-  }
-);
+}, async ({ path: p, file }) => text(grail(file ? `${p} summary ${file}` : `${p} summary`)));
 
-server.registerTool(
-  "grail_read",
-  {
-    description:
-      "Read the source code of a specific symbol (function, class, type, variable) from a file. Returns the implementation with line numbers. Use this as the last step — only after you've used grail_inspect to understand what the symbol does and who depends on it.",
-    inputSchema: {
-      path: z.string().describe("Path to the project directory"),
-      file: z.string().describe("Relative path to the file within the project"),
-      symbol: z.string().describe("Name of the symbol to read"),
-      parent: z.string().optional().describe("Parent class/module name for methods"),
-    },
+server.registerTool("grail_dependencies", {
+  description: "Show what a file imports, with resolved function signatures from the target files.",
+  inputSchema: {
+    path: z.string().describe("Path to the project directory"),
+    file: z.string().describe("Relative path to the file"),
   },
-  async ({ path: dirPath, file, symbol, parent }) => {
-    const args = parent
-      ? `${dirPath} read ${file} ${symbol} ${parent}`
-      : `${dirPath} read ${file} ${symbol}`;
-    return { content: [{ type: "text" as const, text: grail(args) }] };
-  }
-);
+}, async ({ path: p, file }) => text(grail(`${p} dependencies ${file}`)));
+
+server.registerTool("grail_dependents", {
+  description: "Show what files import a given file and which symbols each consumer uses.",
+  inputSchema: {
+    path: z.string().describe("Path to the project directory"),
+    file: z.string().describe("Relative path to the file"),
+  },
+}, async ({ path: p, file }) => text(grail(`${p} dependents ${file}`)));
+
+server.registerTool("grail_read", {
+  description: "Read the source code of a specific symbol (function, class, type, variable) from a file. Returns just that symbol's implementation with line numbers.",
+  inputSchema: {
+    path: z.string().describe("Path to the project directory"),
+    file: z.string().describe("Relative path to the file"),
+    symbol: z.string().describe("Name of the symbol to read"),
+    parent: z.string().optional().describe("Parent class/module name for methods"),
+  },
+}, async ({ path: p, file, symbol, parent }) => text(grail(
+  parent ? `${p} read ${file} ${symbol} ${parent}` : `${p} read ${file} ${symbol}`
+)));
+
+server.registerTool("grail_externals", {
+  description: "Show external packages used across the project, or for a specific file.",
+  inputSchema: {
+    path: z.string().describe("Path to the project directory"),
+    file: z.string().optional().describe("Optional: relative path to a specific file"),
+  },
+}, async ({ path: p, file }) => text(grail(file ? `${p} externals ${file}` : `${p} externals`)));
+
+server.registerTool("grail_entry_points", {
+  description: "Show files that nothing imports — likely entry points or unused files.",
+  inputSchema: {
+    path: z.string().describe("Path to the project directory"),
+  },
+}, async ({ path: p }) => text(grail(`${p} entry-points`)));
+
+server.registerTool("grail_cycles", {
+  description: "Show circular dependency chains in the project.",
+  inputSchema: {
+    path: z.string().describe("Path to the project directory"),
+  },
+}, async ({ path: p }) => text(grail(`${p} cycles`)));
 
 async function main() {
   const transport = new StdioServerTransport();
