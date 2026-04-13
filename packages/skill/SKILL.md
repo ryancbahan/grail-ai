@@ -8,44 +8,36 @@ allowed-tools:
 
 # Grail — Progressive Codebase Disclosure
 
-Grail analyzes codebases at runtime and provides structural understanding — file trees, dependency graphs, exported symbols with function signatures, and surgical source reads. Use it to navigate code without reading entire files.
+Grail analyzes codebases at runtime and provides structural understanding — dependency graphs, exported symbols with function signatures, and surgical source reads. Use it to navigate code without reading entire files.
 
-Available via MCP tools (`grail_overview`, `grail_inspect`, `grail_read`) or CLI (`npx grail <path> <command>`). Both return identical JSON.
+Available via MCP or CLI. Both return identical JSON.
+
+| Command | MCP tool | CLI |
+|---------|----------|-----|
+| Summary | `grail_summary { path, file? }` | `npx grail <path> summary [file]` |
+| Dependencies | `grail_dependencies { path, file }` | `npx grail <path> dependencies <file>` |
+| Dependents | `grail_dependents { path, file }` | `npx grail <path> dependents <file>` |
+| Read symbol | `grail_read { path, file, symbol, parent? }` | `npx grail <path> read <file> <symbol>` |
+| Externals | `grail_externals { path, file? }` | `npx grail <path> externals [file]` |
+| Entry points | `grail_entry_points { path }` | `npx grail <path> entry-points` |
+| Cycles | `grail_cycles { path }` | `npx grail <path> cycles` |
 
 ## Workflow
 
 ### 1. Overview (broad)
-Get the full codebase map. Every file's exported symbols with signatures, dependency counts, externals, entry points.
-
-- MCP: `grail_overview { path: "." }`
-- CLI: `npx grail . summary`
-
-Scan this to identify which files matter for the task. Don't read any files yet.
+Start with `grail_summary` to get every file's exported symbols with signatures, dependency counts, and externals. Scan this to identify which files are relevant. Don't read any files yet.
 
 ### 2. Inspect (narrow)
-Drill into specific files:
-
-**Dependencies** — what a file imports, with resolved function signatures from the target files:
-- MCP: `grail_inspect { path: ".", file: "src/analyze.ts", query: "dependencies" }`
-- CLI: `npx grail . dependencies src/analyze.ts`
-
-**Dependents** — what imports a file, with which symbols each consumer uses:
-- MCP: `grail_inspect { path: ".", file: "src/types.ts", query: "dependents" }`
-- CLI: `npx grail . dependents src/types.ts`
-
-**Symbols** — a file's full symbol list with signatures:
-- MCP: `grail_inspect { path: ".", file: "src/types.ts", query: "symbols" }`
-- CLI: `npx grail . summary src/types.ts`
+For relevant files:
+- `grail_dependencies` — see what it imports, with resolved function signatures from those files. Understand the API contracts without reading the dependency.
+- `grail_dependents` — see what imports this file and which symbols they consume. Check this before making changes.
 
 ### 3. Read (surgical)
-Read one symbol's source code — not the whole file:
-
-- MCP: `grail_read { path: ".", file: "src/builder.ts", symbol: "buildTree" }`
-- CLI: `npx grail . read src/builder.ts buildTree`
+Only when signatures aren't enough, use `grail_read` to get a specific symbol's source code. Not the whole file — just the function or type.
 
 ## Rules
 
-- **Start with overview** before reading any files
-- **Prefer signatures over source** — if the overview or inspect gives you enough, don't read source
-- **Check dependents before editing** — always inspect dependents of any file you're about to modify
-- **Never read a full file** when you can get what you need from grail's symbol-level read
+- **Start with summary** before reading any files
+- **Prefer signatures over source** — if summary or dependencies gives you enough, don't read the source
+- **Check dependents before editing** — always check what would break
+- **Never read a full file** when grail can give you just the symbol you need
