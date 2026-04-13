@@ -4,6 +4,10 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { execSync } from "child_process";
+import { createRequire } from "module";
+
+const require = createRequire(import.meta.url);
+const { version } = require("../package.json");
 
 function grail(args: string): string {
   try {
@@ -22,15 +26,22 @@ function text(result: string) {
   return { content: [{ type: "text" as const, text: result }] };
 }
 
-const server = new McpServer({ name: "grail", version: "0.1.0" });
+function depthFlag(depth?: number): string {
+  return depth !== undefined ? ` --depth ${depth}` : "";
+}
+
+const server = new McpServer({ name: "grail", version });
 
 server.registerTool("grail_summary", {
-  description: "List all files with their exported symbols (with signatures), dependency counts, and external packages. Optionally pass a file for detailed single-file view.",
+  description: "List all files with their exported symbols (with signatures), dependency counts, and external packages. Optionally pass a file for detailed single-file view. Use depth to limit traversal on large codebases.",
   inputSchema: {
     path: z.string().describe("Path to the project directory"),
     file: z.string().optional().describe("Optional: relative path to a specific file"),
+    depth: z.number().optional().describe("Optional: limit directory traversal depth"),
   },
-}, async ({ path: p, file }) => text(grail(file ? `${p} summary ${file}` : `${p} summary`)));
+}, async ({ path: p, file, depth }) => text(grail(
+  file ? `${p} summary ${file}${depthFlag(depth)}` : `${p} summary${depthFlag(depth)}`
+)));
 
 server.registerTool("grail_dependencies", {
   description: "Show what a file imports, with resolved function signatures from the target files.",
@@ -61,26 +72,31 @@ server.registerTool("grail_read", {
 )));
 
 server.registerTool("grail_externals", {
-  description: "Show external packages used across the project, or for a specific file.",
+  description: "Show external packages used across the project, or for a specific file. Use depth to limit traversal.",
   inputSchema: {
     path: z.string().describe("Path to the project directory"),
     file: z.string().optional().describe("Optional: relative path to a specific file"),
+    depth: z.number().optional().describe("Optional: limit directory traversal depth"),
   },
-}, async ({ path: p, file }) => text(grail(file ? `${p} externals ${file}` : `${p} externals`)));
+}, async ({ path: p, file, depth }) => text(grail(
+  file ? `${p} externals ${file}${depthFlag(depth)}` : `${p} externals${depthFlag(depth)}`
+)));
 
 server.registerTool("grail_entry_points", {
-  description: "Show files that nothing imports — likely entry points or unused files.",
+  description: "Show files that nothing imports — likely entry points or unused files. Use depth to limit traversal.",
   inputSchema: {
     path: z.string().describe("Path to the project directory"),
+    depth: z.number().optional().describe("Optional: limit directory traversal depth"),
   },
-}, async ({ path: p }) => text(grail(`${p} entry-points`)));
+}, async ({ path: p, depth }) => text(grail(`${p} entry-points${depthFlag(depth)}`)));
 
 server.registerTool("grail_cycles", {
-  description: "Show circular dependency chains in the project.",
+  description: "Show circular dependency chains in the project. Use depth to limit traversal.",
   inputSchema: {
     path: z.string().describe("Path to the project directory"),
+    depth: z.number().optional().describe("Optional: limit directory traversal depth"),
   },
-}, async ({ path: p }) => text(grail(`${p} cycles`)));
+}, async ({ path: p, depth }) => text(grail(`${p} cycles${depthFlag(depth)}`)));
 
 async function main() {
   const transport = new StdioServerTransport();
