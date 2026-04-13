@@ -123,7 +123,7 @@ async function main() {
           file: rel(filePath),
           symbols: node.symbols
             .filter((s) => !s.parent)
-            .map((s) => ({ name: s.name, kind: s.kind, signature: s.signature, visibility: s.visibility })),
+            .map((s) => ({ file: rel(filePath), name: s.name, kind: s.kind, signature: s.signature, visibility: s.visibility })),
           dependencies: node.imports.filter((i) => !i.isExternal).length,
           externals: [...new Set(node.imports.filter((i) => i.isExternal).map((i) => i.specifier))],
         }));
@@ -150,9 +150,11 @@ async function main() {
             ? lookupSymbol(allFiles, imp.resolvedPath, s.originalName)
             : undefined;
           return {
+            file: imp.resolvedPath ? rel(imp.resolvedPath) : null,
             name: s.name,
             originalName: s.originalName,
-            signature: resolved?.signature ?? null,
+            kind: resolved?.kind ?? undefined,
+            signature: resolved?.signature ?? undefined,
           };
         });
 
@@ -183,10 +185,17 @@ async function main() {
       const result = depPaths.map((depPath) => {
         const depFile = findFileNode(allFiles, depPath);
         const consumedImport = depFile?.node.imports.find((i) => i.resolvedPath === filePath);
-        return {
-          file: rel(depPath),
-          consumedSymbols: consumedImport?.symbols.map((s) => s.originalName) ?? [],
-        };
+        const targetFile = findFileNode(allFiles, filePath);
+        const symbols = (consumedImport?.symbols ?? []).map((s) => {
+          const targetSym = targetFile?.node.symbols.find((sym) => sym.name === s.originalName);
+          return {
+            file: rel(filePath),
+            name: s.originalName,
+            kind: targetSym?.kind,
+            signature: targetSym?.signature,
+          };
+        });
+        return { file: rel(depPath), symbols };
       });
 
       console.log(JSON.stringify({
@@ -248,17 +257,10 @@ async function main() {
         break;
       }
       await buildCallGraph(root, language);
-      const callResults = callsOf(root, commandArg, filteredArgs[3]);
-      // Enrich with signatures from target files
-      const enrichedCalls = callResults.map((c) => {
-        const targetFile = allFiles.find((f) => f.filePath === path.resolve(root.absolutePath, c.file));
-        const targetSym = targetFile?.node.symbols.find((s) => s.name === c.name && s.parent === c.parent);
-        return { ...c, signature: targetSym?.signature ?? null };
-      });
       console.log(JSON.stringify({
         file: commandArg,
-        symbol: filteredArgs[3],
-        calls: enrichedCalls,
+        name: filteredArgs[3],
+        calls: callsOf(root, commandArg, filteredArgs[3]),
       }, null, 2));
       break;
     }
@@ -281,11 +283,10 @@ async function main() {
         break;
       }
       await buildCallGraph(root, language);
-      const callerResults = callersOf(root, commandArg, filteredArgs[3]);
       console.log(JSON.stringify({
         file: commandArg,
-        symbol: filteredArgs[3],
-        callers: callerResults,
+        name: filteredArgs[3],
+        callers: callersOf(root, commandArg, filteredArgs[3]),
       }, null, 2));
       break;
     }
@@ -311,11 +312,18 @@ async function main() {
         console.error(`Symbol not found: ${symbolName} in ${commandArg}`);
         process.exit(1);
       }
+      // Look up the symbol for signature/visibility
+      const fileNode = findFileNode(allFiles, filePath);
+      const symData = fileNode?.node.symbols.find((s) => s.name === symbolName && s.parent === parentName);
       console.log(JSON.stringify({
         file: rel(location.file),
-        symbol: location.symbol,
+        name: location.name,
         kind: location.kind,
-        lines: `${location.startLine}-${location.endLine}`,
+        parent: location.parent,
+        signature: symData?.signature,
+        visibility: symData?.visibility,
+        line: location.line,
+        endLine: location.endLine,
         source: location.source,
       }, null, 2));
       break;

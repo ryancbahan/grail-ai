@@ -22,9 +22,9 @@ describe("locateJavaScriptSymbol", () => {
       const content = "export function buildTree(dir: string): RootNode {\n  return dir;\n}";
       const result = locate(content, "buildTree");
       expect(result).not.toBeNull();
-      expect(result!.symbol).toBe("buildTree");
+      expect(result!.name).toBe("buildTree");
       expect(result!.kind).toBe("function");
-      expect(result!.startLine).toBe(1);
+      expect(result!.line).toBe(1);
       expect(result!.endLine).toBe(3);
       expect(result!.source).toContain("export function buildTree");
       expect(result!.source).toContain("return dir;");
@@ -36,7 +36,7 @@ describe("locateJavaScriptSymbol", () => {
       const content = 'export const VERSION = "1.0.0";';
       const result = locate(content, "VERSION");
       expect(result).not.toBeNull();
-      expect(result!.symbol).toBe("VERSION");
+      expect(result!.name).toBe("VERSION");
       expect(result!.kind).toBe("variable");
       expect(result!.source).toContain("VERSION");
     });
@@ -47,7 +47,7 @@ describe("locateJavaScriptSymbol", () => {
       const content = "export interface FileNode {\n  type: string;\n  name: string;\n}";
       const result = locate(content, "FileNode");
       expect(result).not.toBeNull();
-      expect(result!.symbol).toBe("FileNode");
+      expect(result!.name).toBe("FileNode");
       expect(result!.kind).toBe("interface");
       expect(result!.source).toContain("type: string");
     });
@@ -75,7 +75,7 @@ describe("locateJavaScriptSymbol", () => {
       const content = "export class Parser {\n  parse(input: string): Tree {\n    return input;\n  }\n}";
       const result = locate(content, "parse", "Parser");
       expect(result).not.toBeNull();
-      expect(result!.symbol).toBe("parse");
+      expect(result!.name).toBe("parse");
       expect(result!.kind).toBe("method");
       expect(result!.source).toContain("parse(input: string)");
       expect(result!.source).not.toContain("class Parser");
@@ -118,7 +118,7 @@ describe("locateJavaScriptSymbol", () => {
       const content = "const x = 1;\n\nexport function foo() {\n  return x;\n}";
       const result = locate(content, "foo");
       expect(result).not.toBeNull();
-      expect(result!.startLine).toBe(3);
+      expect(result!.line).toBe(3);
       expect(result!.endLine).toBe(5);
     });
   });

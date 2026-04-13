@@ -145,7 +145,10 @@ function resolveCall(call: CallExpression, projectRoot: string): SymbolRef | nul
 
     if (!calleeName) return null;
 
-    return { file: rel, name: calleeName, parent };
+    const callLine = call.getStartLineNumber();
+    const callContext = call.getFullText().trim().split("\n")[0];
+
+    return { file: rel, name: calleeName, parent, line: callLine, context: callContext };
   } catch {
     return null;
   }

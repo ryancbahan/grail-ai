@@ -26,7 +26,11 @@ describe("callsOf", () => {
       "b.ts": [sym("bar")],
     });
     const result = callsOf(root, "a.ts", "foo");
-    expect(result).toEqual([{ file: "b.ts", name: "bar" }]);
+    expect(result).toHaveLength(1);
+    expect(result[0].file).toBe("b.ts");
+    expect(result[0].name).toBe("bar");
+    expect(result[0].kind).toBe("function");
+    expect(result[0].signature).toBe("");
   });
 
   it("returns empty array when symbol has no calls", () => {
@@ -54,7 +58,9 @@ describe("callsOf", () => {
       "a.ts": [sym("foo", [{ file: "b.ts", name: "bar" }])],
     });
     // callsOf resolves relative to root.absolutePath
-    expect(callsOf(root, "a.ts", "foo")).toEqual([{ file: "b.ts", name: "bar" }]);
+    const result = callsOf(root, "a.ts", "foo");
+    expect(result[0].file).toBe("b.ts");
+    expect(result[0].name).toBe("bar");
   });
 
   it("returns multiple calls", () => {
@@ -76,7 +82,11 @@ describe("callersOf", () => {
       "b.ts": [sym("bar")],
     });
     const result = callersOf(root, "b.ts", "bar");
-    expect(result).toEqual([{ file: "a.ts", name: "foo", parent: undefined }]);
+    expect(result).toHaveLength(1);
+    expect(result[0].file).toBe("a.ts");
+    expect(result[0].name).toBe("foo");
+    expect(result[0].kind).toBe("function");
+    expect(result[0].signature).toBe("");
   });
 
   it("returns multiple callers", () => {
@@ -116,6 +126,8 @@ describe("callersOf", () => {
       "a.ts": [sym("recursive", [{ file: "a.ts", name: "recursive" }])],
     });
     const result = callersOf(root, "a.ts", "recursive");
-    expect(result).toEqual([{ file: "a.ts", name: "recursive", parent: undefined }]);
+    expect(result).toHaveLength(1);
+    expect(result[0].file).toBe("a.ts");
+    expect(result[0].name).toBe("recursive");
   });
 });
