@@ -18,16 +18,16 @@ npm install
 ## Commands
 
 ```bash
-npm run grail -- <path> tree                    # file tree
-npm run grail -- <path> summary [file]          # symbols + deps per file
-npm run grail -- <path> dependencies <file>     # imports with resolved signatures
-npm run grail -- <path> dependents <file>       # consumers with consumed symbols
-npm run grail -- <path> read <file> <symbol>    # one symbol's source code
-npm run grail -- <path> externals [file]        # external packages
-npm run grail -- <path> entry-points            # files nothing imports
-npm run grail -- <path> cycles                  # circular dependencies
-npm run grail -- <path> files                   # all file paths
-npm run grail -- <path> json                    # full AST as JSON
+npm run grail-ai -- <path> tree                    # file tree
+npm run grail-ai -- <path> summary [file]          # symbols + deps per file
+npm run grail-ai -- <path> dependencies <file>     # imports with resolved signatures
+npm run grail-ai -- <path> dependents <file>       # consumers with consumed symbols
+npm run grail-ai -- <path> read <file> <symbol>    # one symbol's source code
+npm run grail-ai -- <path> externals [file]        # external packages
+npm run grail-ai -- <path> entry-points            # files nothing imports
+npm run grail-ai -- <path> cycles                  # circular dependencies
+npm run grail-ai -- <path> files                   # all file paths
+npm run grail-ai -- <path> json                    # full AST as JSON
 npm run ui -- --path <directory>                # web visualization
 ```
 

@@ -7,7 +7,7 @@
   "scripts": {
     "build": "npm run build -w packages/core && npm run build -w packages/lang-javascript && npm run build -w packages/cli && npm run build -w packages/web && npm run build -w packages/mcp",
     "test": "npm test --workspaces",
-    "grail": "npm run grail -w packages/cli --",
+    "grail-ai": "npm run grail-ai -w packages/cli --",
     "ui": "npm run ui -w packages/web --"
   }
 }

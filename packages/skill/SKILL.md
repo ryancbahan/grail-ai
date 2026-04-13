@@ -14,13 +14,13 @@ Available via MCP or CLI. Both return identical JSON.
 
 | Command | MCP tool | CLI |
 |---------|----------|-----|
-| Summary | `grail_summary { path, file? }` | `npx grail <path> summary [file]` |
-| Dependencies | `grail_dependencies { path, file }` | `npx grail <path> dependencies <file>` |
-| Dependents | `grail_dependents { path, file }` | `npx grail <path> dependents <file>` |
-| Read symbol | `grail_read { path, file, symbol, parent? }` | `npx grail <path> read <file> <symbol>` |
-| Externals | `grail_externals { path, file? }` | `npx grail <path> externals [file]` |
-| Entry points | `grail_entry_points { path }` | `npx grail <path> entry-points` |
-| Cycles | `grail_cycles { path }` | `npx grail <path> cycles` |
+| Summary | `grail_summary { path, file? }` | `npx grail-ai <path> summary [file]` |
+| Dependencies | `grail_dependencies { path, file }` | `npx grail-ai <path> dependencies <file>` |
+| Dependents | `grail_dependents { path, file }` | `npx grail-ai <path> dependents <file>` |
+| Read symbol | `grail_read { path, file, symbol, parent? }` | `npx grail-ai <path> read <file> <symbol>` |
+| Externals | `grail_externals { path, file? }` | `npx grail-ai <path> externals [file]` |
+| Entry points | `grail_entry_points { path }` | `npx grail-ai <path> entry-points` |
+| Cycles | `grail_cycles { path }` | `npx grail-ai <path> cycles` |
 
 ## Workflow
 

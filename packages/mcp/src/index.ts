@@ -7,7 +7,7 @@ import { execSync } from "child_process";
 
 function grail(args: string): string {
   try {
-    return execSync(`npx grail ${args}`, {
+    return execSync(`npx grail-ai ${args}`, {
       encoding: "utf-8",
       timeout: 30000,
       stdio: ["pipe", "pipe", "pipe"],
