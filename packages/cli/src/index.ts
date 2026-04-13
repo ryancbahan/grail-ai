@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+import fs from "fs";
+import os from "os";
 import path from "path";
 import {
   analyze,
@@ -36,6 +38,9 @@ Usage:
   grail <path> callers <file> <symbol>  What calls this function
   grail <path> read <file> <symbol>      Read a symbol's source code
   grail <path> json                     Full AST as JSON
+
+  grail skill                          Print Claude Code skill to stdout
+  grail skill --install [path]         Install skill to a path (default: .claude/skills/grail/SKILL.md)
 
 Options:
   --depth <n>                          Limit traversal depth (directory or call chain)
@@ -90,6 +95,47 @@ async function main() {
     } else {
       filteredArgs.push(args[i]);
     }
+  }
+
+  // Handle skill command before analyze (no path needed)
+  if (filteredArgs[0] === "skill") {
+    const skillSource = path.resolve(__dirname, "../../skill/SKILL.md");
+    let skillContent: string;
+    try {
+      skillContent = fs.readFileSync(skillSource, "utf-8");
+    } catch {
+      // Fallback: try relative to the package when installed via npm
+      const altPath = path.resolve(__dirname, "../../../skill/SKILL.md");
+      try {
+        skillContent = fs.readFileSync(altPath, "utf-8");
+      } catch {
+        fail("Could not find SKILL.md", "Ensure the grail-ai package is installed correctly");
+      }
+    }
+
+    const installFlag = args.includes("--install");
+    if (!installFlag) {
+      console.log(skillContent);
+      process.exit(0);
+    }
+
+    // Find the --install value (path after --install, or default)
+    const installIdx = args.indexOf("--install");
+    const installArg = args[installIdx + 1] && !args[installIdx + 1].startsWith("--")
+      ? args[installIdx + 1]
+      : null;
+
+    const targetDir = installArg
+      ? path.resolve(path.dirname(installArg))
+      : path.resolve(process.cwd(), ".claude", "skills", "grail");
+    const targetFile = installArg
+      ? path.resolve(installArg)
+      : path.join(targetDir, "SKILL.md");
+
+    fs.mkdirSync(targetDir, { recursive: true });
+    fs.writeFileSync(targetFile, skillContent);
+    console.log(JSON.stringify({ installed: targetFile }));
+    process.exit(0);
   }
 
   const targetPath = filteredArgs[0];
