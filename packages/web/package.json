@@ -1,6 +1,6 @@
 {
   "name": "@grail/web",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "Grail web visualization",
   "main": "dist/server.js",
   "scripts": {
