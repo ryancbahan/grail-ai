@@ -1,12 +1,12 @@
 import fs from "fs";
 import path from "path";
-import { SymbolLocation, RootNode } from "./types";
-import { collectFiles } from "./walker";
+import { FileEntry, SymbolLocation } from "./types";
 import { parseFile } from "../languages/grammar-loader";
 import { Language } from "../languages/types";
 
 export function readSymbol(
-  root: RootNode,
+  files: FileEntry[],
+  rootPath: string,
   lang: Language,
   targetFile: string,
   symbolName: string,
@@ -14,9 +14,9 @@ export function readSymbol(
 ): SymbolLocation | null {
   const filePath = path.isAbsolute(targetFile)
     ? targetFile
-    : path.resolve(root.absolutePath, targetFile);
+    : path.resolve(rootPath, targetFile);
 
-  const file = collectFiles(root).find((f) => f.filePath === filePath);
+  const file = files.find((f) => f.filePath === filePath);
   if (!file) return null;
 
   if (!file.node.extension || !new Set(lang.descriptor.extensions).has(file.node.extension)) {

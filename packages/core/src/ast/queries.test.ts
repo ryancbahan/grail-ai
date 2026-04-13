@@ -1,4 +1,5 @@
-import { RootNode, Import } from "./types";
+import { RootNode, Import, FileEntry } from "./types";
+import { collectFiles } from "./walker";
 import {
   dependenciesOf,
   dependentsOf,
@@ -38,6 +39,10 @@ function makeRoot(
   };
 }
 
+function filesOf(root: RootNode): FileEntry[] {
+  return collectFiles(root);
+}
+
 describe("dependenciesOf", () => {
   it("returns only resolved local paths, excludes externals", () => {
     const root = makeRoot([
@@ -52,7 +57,7 @@ describe("dependenciesOf", () => {
       { name: "b.ts", imports: [] },
       { name: "c.ts", imports: [] },
     ]);
-    expect(dependenciesOf(root, "/project/a.ts")).toEqual([
+    expect(dependenciesOf(filesOf(root), "/project/a.ts")).toEqual([
       "/project/b.ts",
       "/project/c.ts",
     ]);
@@ -60,19 +65,19 @@ describe("dependenciesOf", () => {
 
   it("returns empty array for leaf files", () => {
     const root = makeRoot([{ name: "a.ts", imports: [] }]);
-    expect(dependenciesOf(root, "/project/a.ts")).toEqual([]);
+    expect(dependenciesOf(filesOf(root), "/project/a.ts")).toEqual([]);
   });
 
   it("returns empty array for unknown files", () => {
     const root = makeRoot([{ name: "a.ts", imports: [] }]);
-    expect(dependenciesOf(root, "/project/unknown.ts")).toEqual([]);
+    expect(dependenciesOf(filesOf(root), "/project/unknown.ts")).toEqual([]);
   });
 
   it("excludes unresolved relative imports", () => {
     const root = makeRoot([
       { name: "a.ts", imports: [imp("./missing", null)] },
     ]);
-    expect(dependenciesOf(root, "/project/a.ts")).toEqual([]);
+    expect(dependenciesOf(filesOf(root), "/project/a.ts")).toEqual([]);
   });
 });
 
@@ -84,7 +89,7 @@ describe("dependentsOf", () => {
       { name: "c.ts", imports: [imp("./b", "/project/b.ts")] },
       { name: "d.ts", imports: [imp("./a", "/project/a.ts")] },
     ]);
-    const deps = dependentsOf(root, "/project/b.ts").sort();
+    const deps = dependentsOf(filesOf(root), "/project/b.ts").sort();
     expect(deps).toEqual(["/project/a.ts", "/project/c.ts"]);
   });
 
@@ -93,15 +98,14 @@ describe("dependentsOf", () => {
       { name: "a.ts", imports: [imp("./b", "/project/b.ts")] },
       { name: "b.ts", imports: [] },
     ]);
-    expect(dependentsOf(root, "/project/a.ts")).toEqual([]);
+    expect(dependentsOf(filesOf(root), "/project/a.ts")).toEqual([]);
   });
 
   it("does not include the file itself", () => {
     const root = makeRoot([
       { name: "a.ts", imports: [imp("./a", "/project/a.ts")] },
     ]);
-    // a imports itself — dependentsOf should still return a as a dependent
-    expect(dependentsOf(root, "/project/a.ts")).toEqual(["/project/a.ts"]);
+    expect(dependentsOf(filesOf(root), "/project/a.ts")).toEqual(["/project/a.ts"]);
   });
 });
 
@@ -129,19 +133,19 @@ describe("externalsOf", () => {
         ],
       },
     ]);
-    expect(externalsOf(root, "/project/a.ts")).toEqual(["lodash", "fs"]);
+    expect(externalsOf(filesOf(root), "/project/a.ts")).toEqual(["lodash", "fs"]);
   });
 
   it("returns empty for file with no external imports", () => {
     const root = makeRoot([
       { name: "a.ts", imports: [imp("./b", "/project/b.ts")] },
     ]);
-    expect(externalsOf(root, "/project/a.ts")).toEqual([]);
+    expect(externalsOf(filesOf(root), "/project/a.ts")).toEqual([]);
   });
 
   it("returns empty for unknown file", () => {
     const root = makeRoot([]);
-    expect(externalsOf(root, "/project/nope.ts")).toEqual([]);
+    expect(externalsOf(filesOf(root), "/project/nope.ts")).toEqual([]);
   });
 });
 
@@ -151,7 +155,7 @@ describe("findEntryPoints", () => {
       { name: "entry.ts", imports: [imp("./lib", "/project/lib.ts")] },
       { name: "lib.ts", imports: [] },
     ]);
-    expect(findEntryPoints(root)).toEqual(["/project/entry.ts"]);
+    expect(findEntryPoints(filesOf(root))).toEqual(["/project/entry.ts"]);
   });
 
   it("returns all files when nothing imports anything", () => {
@@ -159,7 +163,7 @@ describe("findEntryPoints", () => {
       { name: "a.ts", imports: [] },
       { name: "b.ts", imports: [] },
     ]);
-    const entries = findEntryPoints(root).sort();
+    const entries = findEntryPoints(filesOf(root)).sort();
     expect(entries).toEqual(["/project/a.ts", "/project/b.ts"]);
   });
 
@@ -168,7 +172,7 @@ describe("findEntryPoints", () => {
       { name: "a.ts", imports: [imp("./b", "/project/b.ts")] },
       { name: "b.ts", imports: [imp("./a", "/project/a.ts")] },
     ]);
-    expect(findEntryPoints(root)).toEqual([]);
+    expect(findEntryPoints(filesOf(root))).toEqual([]);
   });
 });
 
@@ -178,7 +182,7 @@ describe("findCircularDependencies", () => {
       { name: "a.ts", imports: [imp("./b", "/project/b.ts")] },
       { name: "b.ts", imports: [imp("./a", "/project/a.ts")] },
     ]);
-    const cycles = findCircularDependencies(root);
+    const cycles = findCircularDependencies(filesOf(root));
     expect(cycles).toHaveLength(1);
     expect(cycles[0].sort()).toEqual(["/project/a.ts", "/project/b.ts"]);
   });
@@ -189,7 +193,7 @@ describe("findCircularDependencies", () => {
       { name: "b.ts", imports: [imp("./c", "/project/c.ts")] },
       { name: "c.ts", imports: [imp("./a", "/project/a.ts")] },
     ]);
-    const cycles = findCircularDependencies(root);
+    const cycles = findCircularDependencies(filesOf(root));
     expect(cycles).toHaveLength(1);
     expect(cycles[0].sort()).toEqual([
       "/project/a.ts",
@@ -206,7 +210,7 @@ describe("findCircularDependencies", () => {
       { name: "y.ts", imports: [imp("./x", "/project/x.ts")] },
       { name: "standalone.ts", imports: [] },
     ]);
-    const cycles = findCircularDependencies(root);
+    const cycles = findCircularDependencies(filesOf(root));
     expect(cycles).toHaveLength(2);
     const allMembers = cycles.flat().sort();
     expect(allMembers).toEqual([
@@ -223,14 +227,14 @@ describe("findCircularDependencies", () => {
       { name: "b.ts", imports: [imp("./c", "/project/c.ts")] },
       { name: "c.ts", imports: [] },
     ]);
-    expect(findCircularDependencies(root)).toEqual([]);
+    expect(findCircularDependencies(filesOf(root))).toEqual([]);
   });
 
   it("ignores external imports", () => {
     const root = makeRoot([
       { name: "a.ts", imports: [imp("lodash", null, true)] },
     ]);
-    expect(findCircularDependencies(root)).toEqual([]);
+    expect(findCircularDependencies(filesOf(root))).toEqual([]);
   });
 
   it("does not report single-node non-cycles", () => {
@@ -238,6 +242,6 @@ describe("findCircularDependencies", () => {
       { name: "a.ts", imports: [imp("./b", "/project/b.ts")] },
       { name: "b.ts", imports: [] },
     ]);
-    expect(findCircularDependencies(root)).toEqual([]);
+    expect(findCircularDependencies(filesOf(root))).toEqual([]);
   });
 });

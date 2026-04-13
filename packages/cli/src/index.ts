@@ -15,7 +15,7 @@ import {
   callsOf,
   callersOf,
 } from "@grail-ai/core";
-import type { FileNode, Symbol as GrailSymbol } from "@grail-ai/core";
+import type { ASTNode, FileNode, Symbol as GrailSymbol } from "@grail-ai/core";
 import { javascript } from "@grail-ai/lang-javascript";
 
 registerLanguage(javascript);
@@ -38,7 +38,8 @@ Usage:
   grail <path> json                     Full AST as JSON
 
 Options:
-  --depth <n>                          Limit directory traversal depth
+  --depth <n>                          Limit traversal depth (directory or call chain)
+  --transitive                         Follow calls/callers transitively (full chain)
 `.trim();
 
 function resolveFile(rootPath: string, file: string): string {
@@ -76,13 +77,16 @@ async function main() {
     process.exit(0);
   }
 
-  // Parse --depth flag from anywhere in args
+  // Parse flags from anywhere in args
   let depth: number | undefined;
+  let transitive = false;
   const filteredArgs: string[] = [];
   for (let i = 0; i < args.length; i++) {
     if (args[i] === "--depth" && args[i + 1]) {
       depth = parseInt(args[i + 1], 10);
-      i++; // skip value
+      i++;
+    } else if (args[i] === "--transitive") {
+      transitive = true;
     } else {
       filteredArgs.push(args[i]);
     }
@@ -92,13 +96,15 @@ async function main() {
   const command = filteredArgs[1] || "tree";
   const commandArg = filteredArgs[2];
 
-  const { root, language } = await analyze(targetPath, { depth });
+  const treeCommands = new Set(["tree", "summary", "files", "externals", "entry-points", "cycles", "json"]);
+  const fsDepth = treeCommands.has(command) ? depth : undefined;
+  const { root, language } = await analyze(targetPath, { depth: fsDepth });
   const rel = (p: string) => path.relative(root.absolutePath, p);
   const allFiles = collectFiles(root);
 
   switch (command) {
     case "tree": {
-      function toTreeJson(node: any): any {
+      function toTreeJson(node: ASTNode): object {
         if (node.type === "file") {
           return { name: node.name, type: "file", extension: node.extension };
         }
@@ -185,7 +191,7 @@ async function main() {
     case "dependents": {
       if (!commandArg) fail("Missing file argument", "Usage: grail <path> dependents <file>");
       const filePath = resolveFile(root.absolutePath, commandArg);
-      const depPaths = dependentsOf(root, filePath);
+      const depPaths = dependentsOf(allFiles, filePath);
 
       const result = depPaths.map((depPath) => {
         const depFile = findFileNode(allFiles, depPath);
@@ -224,13 +230,13 @@ async function main() {
     }
 
     case "entry-points": {
-      const entries = findEntryPoints(root).map(rel);
+      const entries = findEntryPoints(allFiles).map(rel);
       console.log(JSON.stringify({ entryPoints: entries }, null, 2));
       break;
     }
 
     case "cycles": {
-      const cycles = findCircularDependencies(root).map((c) => c.map(rel));
+      const cycles = findCircularDependencies(allFiles).map((c) => c.map(rel));
       console.log(JSON.stringify({ cycles }, null, 2));
       break;
     }
@@ -255,11 +261,11 @@ async function main() {
         }));
         break;
       }
-      await buildCallGraph(root, language);
+      await buildCallGraph(allFiles, root.absolutePath, language);
       console.log(JSON.stringify({
         file: commandArg,
         name: filteredArgs[3],
-        calls: callsOf(root, commandArg, filteredArgs[3]),
+        calls: callsOf(allFiles, root.absolutePath, commandArg, filteredArgs[3], { transitive, maxDepth: depth }),
       }, null, 2));
       break;
     }
@@ -278,11 +284,11 @@ async function main() {
         }));
         break;
       }
-      await buildCallGraph(root, language);
+      await buildCallGraph(allFiles, root.absolutePath, language);
       console.log(JSON.stringify({
         file: commandArg,
         name: filteredArgs[3],
-        callers: callersOf(root, commandArg, filteredArgs[3]),
+        callers: callersOf(allFiles, root.absolutePath, commandArg, filteredArgs[3], { transitive, maxDepth: depth }),
       }, null, 2));
       break;
     }
@@ -294,7 +300,7 @@ async function main() {
       if (!symbolName) fail("Missing symbol argument", "Usage: grail <path> read <file> <symbol> [parent]");
       if (!language) fail("No language detected", "Ensure the project has recognizable marker files or source files");
       const filePath = resolveFile(root.absolutePath, commandArg);
-      const location = readSymbol(root, language, filePath, symbolName, parentName);
+      const location = readSymbol(allFiles, root.absolutePath, language, filePath, symbolName, parentName);
       if (!location) fail(`Symbol not found: ${symbolName} in ${commandArg}`, "Check the symbol name and file path");
       // Look up the symbol for signature/visibility
       const fileNode = findFileNode(allFiles, filePath);
@@ -334,7 +340,6 @@ main().catch((err: unknown) => {
   } else if (nodeErr.code === "EACCES") {
     fail(`Permission denied: ${nodeErr.path ?? "unknown"}`, "Check file permissions");
   } else {
-    console.log(JSON.stringify({ error: message }));
-    process.exit(1);
+    fail(message);
   }
 });
