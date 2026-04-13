@@ -27,7 +27,7 @@ jobs:
 
       - name: Package tarball
         run: |
-          tar -czf grail-${{ github.event.release.tag_name }}.tar.gz \
+          tar -czf grail-ai-${{ github.event.release.tag_name }}.tar.gz \
             --exclude=node_modules \
             --exclude=.git \
             packages/*/dist \
@@ -39,7 +39,7 @@ jobs:
       - name: Upload release artifact
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload ${{ github.event.release.tag_name }} grail-${{ github.event.release.tag_name }}.tar.gz --clobber
+        run: gh release upload ${{ github.event.release.tag_name }} grail-ai-${{ github.event.release.tag_name }}.tar.gz --clobber
 
       - run: npm publish -w packages/core --access public --provenance
         env:

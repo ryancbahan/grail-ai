@@ -46,7 +46,7 @@ The publish workflow runs automatically — builds, tests, uploads tarball, publ
 
 1. `@grail-ai/core`
 2. `@grail-ai/lang-javascript`
-3. `grail` (CLI)
+3. `grail-ai` (CLI)
 4. `@grail-ai/web`
 5. `@grail-ai/mcp`
 

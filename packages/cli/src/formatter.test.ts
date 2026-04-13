@@ -1,5 +1,5 @@
-import { formatTree, formatDependencyGraph } from "./formatter";
-import type { ASTNode, DirectoryNode, FileNode, RootNode, Import } from "@grail-ai/core";
+import { formatTree, formatDependencyGraph, formatFileSummary } from "./formatter";
+import type { ASTNode, DirectoryNode, FileNode, RootNode, Import, Symbol } from "@grail-ai/core";
 
 function file(name: string, extension: string | null = null, imports: Import[] = []): FileNode {
   return { type: "file", name, extension, imports, symbols: [] };
@@ -202,5 +202,95 @@ describe("formatDependencyGraph", () => {
 
     const output = formatDependencyGraph(root);
     expect(output).not.toContain("Externals:");
+  });
+});
+
+function sym(name: string, kind: Symbol["kind"], visibility: Symbol["visibility"] = "public", parent?: string): Symbol {
+  return { name, kind, signature: `${kind} ${name}`, visibility, parent };
+}
+
+function fileWithSymbols(
+  name: string,
+  symbols: Symbol[],
+  imports: Import[] = []
+): FileNode {
+  return { type: "file", name, extension: ".ts", imports, symbols };
+}
+
+describe("formatFileSummary", () => {
+  it("shows exports with kind prefixes", () => {
+    const node = fileWithSymbols("builder.ts", [
+      sym("buildTree", "function"),
+      sym("DEFAULT_IGNORE", "variable"),
+    ]);
+    const result = formatFileSummary(node);
+    expect(result).toBe("exports: fn buildTree, const DEFAULT_IGNORE");
+  });
+
+  it("shows dep counts with externals", () => {
+    const node = fileWithSymbols("index.ts", [sym("main", "function")], [
+      imp("./utils", "/project/utils.ts"),
+      imp("fs", null, true),
+      imp("path", null, true),
+    ]);
+    const result = formatFileSummary(node);
+    expect(result).toContain("exports: fn main");
+    expect(result).toContain("1 dep");
+    expect(result).toContain("2 ext (fs, path)");
+  });
+
+  it("shows only deps when no symbols", () => {
+    const node = fileWithSymbols("script.ts", [], [
+      imp("fs", null, true),
+    ]);
+    expect(formatFileSummary(node)).toBe("1 ext (fs)");
+  });
+
+  it("shows only exports when no imports", () => {
+    const node = fileWithSymbols("types.ts", [
+      sym("ASTNode", "type"),
+    ]);
+    expect(formatFileSummary(node)).toBe("exports: type ASTNode");
+  });
+
+  it("returns empty string for empty file", () => {
+    const node = fileWithSymbols("empty.ts", []);
+    expect(formatFileSummary(node)).toBe("");
+  });
+
+  it("filters out private symbols", () => {
+    const node = fileWithSymbols("class.ts", [
+      sym("MyClass", "class"),
+      sym("helper", "method", "private", "MyClass"),
+      sym("doStuff", "method", "public", "MyClass"),
+    ]);
+    // formatFileSummary only shows public symbols without a parent
+    expect(formatFileSummary(node)).toBe("exports: class MyClass");
+  });
+
+  it("deduplicates external specifiers", () => {
+    const node = fileWithSymbols("index.ts", [], [
+      imp("fs", null, true),
+      imp("fs", null, true),
+    ]);
+    expect(formatFileSummary(node)).toBe("1 ext (fs)");
+  });
+
+  it("pluralizes deps correctly", () => {
+    const one = fileWithSymbols("a.ts", [], [imp("./b", "/b.ts")]);
+    expect(formatFileSummary(one)).toBe("1 dep");
+
+    const two = fileWithSymbols("a.ts", [], [
+      imp("./b", "/b.ts"),
+      imp("./c", "/c.ts"),
+    ]);
+    expect(formatFileSummary(two)).toBe("2 deps");
+  });
+
+  it("uses pipe separator between exports and deps", () => {
+    const node = fileWithSymbols("mod.ts", [sym("foo", "function")], [
+      imp("./bar", "/bar.ts"),
+    ]);
+    expect(formatFileSummary(node)).toBe("exports: fn foo | 1 dep");
   });
 });
