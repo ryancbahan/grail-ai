@@ -1,5 +1,6 @@
 export interface TreeOptions {
   ignorePaths?: string[];
+  depth?: number;
 }
 
 export interface ImportedSymbol {

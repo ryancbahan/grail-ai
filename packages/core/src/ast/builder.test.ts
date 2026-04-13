@@ -190,4 +190,69 @@ describe("buildTree", () => {
       expect(names).toContain(".git");
     });
   });
+
+  describe("depth", () => {
+    it("depth 1 includes top-level files and empty directories", () => {
+      touch(path.join(tmpDir, "readme.md"));
+      touch(path.join(tmpDir, "src", "index.ts"));
+      touch(path.join(tmpDir, "src", "utils", "helper.ts"));
+
+      const root = buildTree(tmpDir, { ignorePaths: [], depth: 1 });
+      const names = root.tree.children.map((c) => c.name);
+
+      expect(names).toContain("readme.md");
+      expect(names).toContain("src");
+
+      const src = root.tree.children.find((c) => c.name === "src");
+      expect(src?.type).toBe("directory");
+      if (src?.type === "directory") {
+        expect(src.children).toEqual([]);
+      }
+    });
+
+    it("depth 2 includes one level of nesting", () => {
+      touch(path.join(tmpDir, "src", "index.ts"));
+      touch(path.join(tmpDir, "src", "lib", "deep.ts"));
+
+      const root = buildTree(tmpDir, { ignorePaths: [], depth: 2 });
+      const src = root.tree.children.find((c) => c.name === "src");
+      expect(src?.type).toBe("directory");
+      if (src?.type !== "directory") return;
+
+      const srcNames = src.children.map((c) => c.name);
+      expect(srcNames).toContain("index.ts");
+      expect(srcNames).toContain("lib");
+
+      const lib = src.children.find((c) => c.name === "lib");
+      if (lib?.type === "directory") {
+        expect(lib.children).toEqual([]);
+      }
+    });
+
+    it("no depth option traverses everything", () => {
+      touch(path.join(tmpDir, "a", "b", "c", "deep.ts"));
+
+      const root = buildTree(tmpDir, { ignorePaths: [] });
+
+      const a = root.tree.children.find((c) => c.name === "a");
+      expect(a?.type).toBe("directory");
+      if (a?.type !== "directory") return;
+      const b = a.children.find((c) => c.name === "b");
+      expect(b?.type).toBe("directory");
+      if (b?.type !== "directory") return;
+      const c = b.children.find((c) => c.name === "c");
+      expect(c?.type).toBe("directory");
+      if (c?.type !== "directory") return;
+      expect(c.children).toHaveLength(1);
+      expect(c.children[0].name).toBe("deep.ts");
+    });
+
+    it("depth 0 returns root directory with no children", () => {
+      touch(path.join(tmpDir, "file.ts"));
+
+      const root = buildTree(tmpDir, { ignorePaths: [], depth: 0 });
+      expect(root.tree.type).toBe("directory");
+      expect(root.tree.children).toEqual([]);
+    });
+  });
 });

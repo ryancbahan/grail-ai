@@ -33,6 +33,9 @@ Usage:
   grail <path> files                    List all file paths
   grail <path> read <file> <symbol>      Read a symbol's source code
   grail <path> json                     Full AST as JSON
+
+Options:
+  --depth <n>                          Limit directory traversal depth
 `.trim();
 
 function resolveFile(rootPath: string, file: string): string {
@@ -65,13 +68,25 @@ async function main() {
     process.exit(0);
   }
 
-  const targetPath = args[0];
-  const command = args[1] || "tree";
-  const commandArg = args[2];
+  // Parse --depth flag from anywhere in args
+  let depth: number | undefined;
+  const filteredArgs: string[] = [];
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === "--depth" && args[i + 1]) {
+      depth = parseInt(args[i + 1], 10);
+      i++; // skip value
+    } else {
+      filteredArgs.push(args[i]);
+    }
+  }
+
+  const targetPath = filteredArgs[0];
+  const command = filteredArgs[1] || "tree";
+  const commandArg = filteredArgs[2];
 
   await initAnalyzer();
 
-  const { root, language } = analyze(targetPath);
+  const { root, language } = analyze(targetPath, { depth });
   const rel = (p: string) => path.relative(root.absolutePath, p);
   const allFiles = collectFiles(root);
 
@@ -218,8 +233,8 @@ async function main() {
         console.error("Usage: grail <path> read <file> <symbol> [parent]");
         process.exit(1);
       }
-      const symbolName = args[3];
-      const parentName = args[4];
+      const symbolName = filteredArgs[3];
+      const parentName = filteredArgs[4];
       if (!symbolName) {
         console.error("Usage: grail <path> read <file> <symbol> [parent]");
         process.exit(1);
