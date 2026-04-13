@@ -11,6 +11,9 @@ import {
   findCircularDependencies,
   collectFiles,
   readSymbol,
+  buildCallGraph,
+  callsOf,
+  callersOf,
 } from "@grail-ai/core";
 import type { FileNode, Symbol as GrailSymbol } from "@grail-ai/core";
 import { javascript } from "@grail-ai/lang-javascript";
@@ -30,6 +33,8 @@ Usage:
   grail <path> entry-points             Files nothing imports
   grail <path> cycles                   Circular dependencies
   grail <path> files                    List all file paths
+  grail <path> calls <file> <symbol>     What does this function call (with signatures)
+  grail <path> callers <file> <symbol>  What calls this function
   grail <path> read <file> <symbol>      Read a symbol's source code
   grail <path> json                     Full AST as JSON
 
@@ -104,7 +109,7 @@ async function main() {
         }
         console.log(JSON.stringify({
           file: rel(filePath),
-          symbols: file.node.symbols.filter((s) => s.visibility === "public"),
+          symbols: file.node.symbols,
           imports: file.node.imports.map((imp) => ({
             specifier: imp.specifier,
             kind: imp.kind,
@@ -117,8 +122,8 @@ async function main() {
         const result = allFiles.map(({ filePath, node }) => ({
           file: rel(filePath),
           symbols: node.symbols
-            .filter((s) => s.visibility === "public" && !s.parent)
-            .map((s) => ({ name: s.name, kind: s.kind, signature: s.signature })),
+            .filter((s) => !s.parent)
+            .map((s) => ({ file: rel(filePath), name: s.name, kind: s.kind, signature: s.signature, visibility: s.visibility })),
           dependencies: node.imports.filter((i) => !i.isExternal).length,
           externals: [...new Set(node.imports.filter((i) => i.isExternal).map((i) => i.specifier))],
         }));
@@ -145,9 +150,11 @@ async function main() {
             ? lookupSymbol(allFiles, imp.resolvedPath, s.originalName)
             : undefined;
           return {
+            file: imp.resolvedPath ? rel(imp.resolvedPath) : null,
             name: s.name,
             originalName: s.originalName,
-            signature: resolved?.signature ?? null,
+            kind: resolved?.kind ?? undefined,
+            signature: resolved?.signature ?? undefined,
           };
         });
 
@@ -178,10 +185,17 @@ async function main() {
       const result = depPaths.map((depPath) => {
         const depFile = findFileNode(allFiles, depPath);
         const consumedImport = depFile?.node.imports.find((i) => i.resolvedPath === filePath);
-        return {
-          file: rel(depPath),
-          consumedSymbols: consumedImport?.symbols.map((s) => s.originalName) ?? [],
-        };
+        const targetFile = findFileNode(allFiles, filePath);
+        const symbols = (consumedImport?.symbols ?? []).map((s) => {
+          const targetSym = targetFile?.node.symbols.find((sym) => sym.name === s.originalName);
+          return {
+            file: rel(filePath),
+            name: s.originalName,
+            kind: targetSym?.kind,
+            signature: targetSym?.signature,
+          };
+        });
+        return { file: rel(depPath), symbols };
       });
 
       console.log(JSON.stringify({
@@ -225,6 +239,58 @@ async function main() {
       break;
     }
 
+    case "calls": {
+      if (!commandArg || !filteredArgs[3]) {
+        console.error("Usage: grail <path> calls <file> <symbol>");
+        process.exit(1);
+      }
+      if (!language) {
+        console.log(JSON.stringify({ error: "No language detected", suggestion: "Ensure the project has recognizable marker files or source files" }));
+        break;
+      }
+      if (!language.implementation.buildCallGraph) {
+        console.log(JSON.stringify({
+          error: "Call graph not available",
+          reason: `The ${language.descriptor.name} language plugin does not support call resolution`,
+          suggestion: "Use 'dependencies' and 'dependents' for file-level relationships",
+        }));
+        break;
+      }
+      await buildCallGraph(root, language);
+      console.log(JSON.stringify({
+        file: commandArg,
+        name: filteredArgs[3],
+        calls: callsOf(root, commandArg, filteredArgs[3]),
+      }, null, 2));
+      break;
+    }
+
+    case "callers": {
+      if (!commandArg || !filteredArgs[3]) {
+        console.error("Usage: grail <path> callers <file> <symbol>");
+        process.exit(1);
+      }
+      if (!language) {
+        console.log(JSON.stringify({ error: "No language detected", suggestion: "Ensure the project has recognizable marker files or source files" }));
+        break;
+      }
+      if (!language.implementation.buildCallGraph) {
+        console.log(JSON.stringify({
+          error: "Call graph not available",
+          reason: `The ${language.descriptor.name} language plugin does not support call resolution`,
+          suggestion: "Use 'dependencies' and 'dependents' for file-level relationships",
+        }));
+        break;
+      }
+      await buildCallGraph(root, language);
+      console.log(JSON.stringify({
+        file: commandArg,
+        name: filteredArgs[3],
+        callers: callersOf(root, commandArg, filteredArgs[3]),
+      }, null, 2));
+      break;
+    }
+
     case "read": {
       if (!commandArg) {
         console.error("Usage: grail <path> read <file> <symbol> [parent]");
@@ -246,11 +312,18 @@ async function main() {
         console.error(`Symbol not found: ${symbolName} in ${commandArg}`);
         process.exit(1);
       }
+      // Look up the symbol for signature/visibility
+      const fileNode = findFileNode(allFiles, filePath);
+      const symData = fileNode?.node.symbols.find((s) => s.name === symbolName && s.parent === parentName);
       console.log(JSON.stringify({
         file: rel(location.file),
-        symbol: location.symbol,
+        name: location.name,
         kind: location.kind,
-        lines: `${location.startLine}-${location.endLine}`,
+        parent: location.parent,
+        signature: symData?.signature,
+        visibility: symData?.visibility,
+        line: location.line,
+        endLine: location.endLine,
         source: location.source,
       }, null, 2));
       break;

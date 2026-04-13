@@ -97,16 +97,15 @@ export function formatFileSummary(node: FileNode): string {
   const parts: string[] = [];
 
   if (node.symbols.length > 0) {
-    const publicSymbols = node.symbols.filter((s) => s.visibility === "public" && !s.parent);
-    if (publicSymbols.length > 0) {
-      const grouped = publicSymbols
-        .map((s) => {
-          const prefix = KIND_PREFIX[s.kind];
-          return prefix ? `${prefix} ${s.name}` : s.name;
-        })
-        .join(", ");
-      parts.push(`exports: ${grouped}`);
-    }
+    const topLevel = node.symbols.filter((s) => !s.parent);
+    const exported = topLevel.filter((s) => s.visibility === "public");
+    const internal = topLevel.filter((s) => s.visibility === "internal");
+
+    const format = (syms: typeof topLevel) =>
+      syms.map((s) => { const p = KIND_PREFIX[s.kind]; return p ? `${p} ${s.name}` : s.name; }).join(", ");
+
+    if (exported.length > 0) parts.push(`exports: ${format(exported)}`);
+    if (internal.length > 0) parts.push(`internal: ${format(internal)}`);
   }
 
   const localDeps = node.imports.filter((i) => !i.isExternal).length;

@@ -21,9 +21,10 @@ export function locateJavaScriptSymbol(
 
   return {
     file: filePath,
-    symbol: symbolName,
+    name: symbolName,
     kind: inferKind(node),
-    startLine,
+    parent: parentName,
+    line: startLine,
     endLine,
     source,
   };

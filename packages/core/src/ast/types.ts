@@ -31,12 +31,29 @@ export type SymbolKind =
 
 export type SymbolVisibility = "public" | "private" | "protected" | "internal";
 
+export interface SymbolRef {
+  file: string;
+  name: string;
+  kind?: SymbolKind;
+  parent?: string;
+  signature?: string;
+  visibility?: SymbolVisibility;
+  line?: number;
+  context?: string;
+}
+
 export interface Symbol {
   name: string;
   kind: SymbolKind;
   signature: string;
   visibility: SymbolVisibility;
   parent?: string;
+  calls?: SymbolRef[];
+}
+
+export interface SymbolLocation extends SymbolRef {
+  endLine: number;
+  source: string;
 }
 
 interface BaseNode {
@@ -67,13 +84,4 @@ export interface RootNode {
 export interface FileEntry {
   filePath: string;
   node: FileNode;
-}
-
-export interface SymbolLocation {
-  file: string;
-  symbol: string;
-  kind: SymbolKind;
-  startLine: number;
-  endLine: number;
-  source: string;
 }

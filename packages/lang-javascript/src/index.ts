@@ -24,17 +24,19 @@ export const javascript: LanguageDescriptor = {
     ],
   },
   load: async () => {
-    const [imports, symbols, resolver, locator] = await Promise.all([
+    const [imports, symbols, resolver, locator, callgraph] = await Promise.all([
       import("./imports"),
       import("./symbols"),
       import("./resolver"),
       import("./locator"),
+      import("./callgraph"),
     ]);
     return {
       parseImports: imports.parseJavaScriptImports,
       parseSymbols: symbols.parseJavaScriptSymbols,
       resolveImport: resolver.resolveJavaScriptImport,
       locateSymbol: locator.locateJavaScriptSymbol,
+      buildCallGraph: callgraph.buildJavaScriptCallGraph,
     };
   },
 };

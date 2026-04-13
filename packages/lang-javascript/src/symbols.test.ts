@@ -115,11 +115,14 @@ describe("parseJavaScriptSymbols", () => {
   });
 
   describe("named export lists", () => {
-    it("extracts export { a, b }", () => {
+    it("extracts export { a, b } plus internal declarations", () => {
       const result = parse("const a = 1;\nconst b = 2;\nexport { a, b };");
-      expect(result).toHaveLength(2);
-      expect(result.map((s) => s.name).sort()).toEqual(["a", "b"]);
-      expect(result.every((s) => s.kind === "unknown")).toBe(true);
+      // Internal consts + public re-exports (deduped by kind:name key)
+      const publicSyms = result.filter((s) => s.visibility === "public");
+      expect(publicSyms).toHaveLength(2);
+      expect(publicSyms.map((s) => s.name).sort()).toEqual(["a", "b"]);
+      const internalSyms = result.filter((s) => s.visibility === "internal");
+      expect(internalSyms).toHaveLength(2);
     });
 
     it("skips re-exports with source", () => {
@@ -141,8 +144,11 @@ describe("parseJavaScriptSymbols", () => {
   });
 
   describe("edge cases", () => {
-    it("returns empty for file with no exports", () => {
-      expect(parse("const x = 1;")).toEqual([]);
+    it("extracts internal symbols from file with no exports", () => {
+      const result = parse("const x = 1;");
+      expect(result).toHaveLength(1);
+      expect(result[0].name).toBe("x");
+      expect(result[0].visibility).toBe("internal");
     });
 
     it("returns empty for empty file", () => {
