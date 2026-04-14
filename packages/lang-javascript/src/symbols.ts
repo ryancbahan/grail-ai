@@ -131,12 +131,19 @@ function handleDeclaration(
       for (const child of declaration.namedChildren) {
         if (child.type === "variable_declarator") {
           const name = child.childForFieldName("name");
-          if (name) {
-            const eqIndex = child.text.indexOf("=");
-            const sig = eqIndex > 0
-              ? child.text.slice(0, eqIndex).trim()
-              : child.text;
-            add({ name: name.text, kind: "variable", signature: sig, visibility });
+          if (!name) continue;
+
+          const varName = name.text;
+          const eqIndex = child.text.indexOf("=");
+          const sig = eqIndex > 0
+            ? child.text.slice(0, eqIndex).trim()
+            : child.text;
+          add({ name: varName, kind: "variable", signature: sig, visibility });
+
+          // Emit child symbols for function properties in object literals
+          const value = child.childForFieldName("value");
+          if (value && value.type === "object") {
+            extractObjectMethods(value, varName, visibility, add);
           }
         }
       }
@@ -209,6 +216,39 @@ function extractClassMembers(
         visibility,
         parent: className,
       });
+    }
+  }
+}
+
+function extractObjectMethods(
+  obj: Node,
+  parentName: string,
+  visibility: Symbol["visibility"],
+  add: (sym: Symbol) => void
+): void {
+  for (const prop of obj.namedChildren) {
+    // Method shorthand: { run() {} }
+    if (prop.type === "method_definition") {
+      const name = prop.childForFieldName("name");
+      if (!name) continue;
+      const sig = extractSignature(prop, "statement_block");
+      add({ name: name.text, kind: "method", signature: sig, visibility, parent: parentName });
+      continue;
+    }
+
+    // Key-value pair: { run: () => {} } or { run: function() {} }
+    if (prop.type === "pair") {
+      const key = prop.childForFieldName("key");
+      const value = prop.childForFieldName("value");
+      if (!key || !value) continue;
+
+      const isFn = value.type === "arrow_function"
+        || value.type === "function_expression"
+        || value.type === "function";
+      if (isFn) {
+        const sig = extractSignature(value, "statement_block");
+        add({ name: key.text, kind: "method", signature: sig, visibility, parent: parentName });
+      }
     }
   }
 }

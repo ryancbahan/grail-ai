@@ -143,6 +143,56 @@ describe("parseJavaScriptSymbols", () => {
     });
   });
 
+  describe("object literal methods", () => {
+    it("emits child symbols for arrow function properties", () => {
+      const result = parse(`export const cmd = { run: async () => {} };`);
+      const variable = result.find((s) => s.name === "cmd");
+      const method = result.find((s) => s.name === "run");
+
+      expect(variable).toBeDefined();
+      expect(variable!.kind).toBe("variable");
+
+      expect(method).toBeDefined();
+      expect(method!.kind).toBe("method");
+      expect(method!.parent).toBe("cmd");
+    });
+
+    it("emits child symbols for method shorthand", () => {
+      const result = parse(`export const cmd = { run() {} };`);
+      const method = result.find((s) => s.name === "run");
+
+      expect(method).toBeDefined();
+      expect(method!.kind).toBe("method");
+      expect(method!.parent).toBe("cmd");
+    });
+
+    it("does not emit child symbols for non-function properties", () => {
+      const result = parse(`export const cmd = { name: "test", run: () => {} };`);
+      const names = result.map((s) => s.name);
+
+      expect(names).toContain("cmd");
+      expect(names).toContain("run");
+      expect(names).not.toContain("name");
+    });
+
+    it("handles multiple function properties", () => {
+      const result = parse(`export const obj = { a: () => {}, b() {}, c: "not a function" };`);
+      const methods = result.filter((s) => s.parent === "obj");
+
+      expect(methods).toHaveLength(2);
+      expect(methods.map((m) => m.name).sort()).toEqual(["a", "b"]);
+    });
+
+    it("works for internal (non-exported) variables", () => {
+      const result = parse(`const handler = { process: () => {} };`);
+      const method = result.find((s) => s.name === "process");
+
+      expect(method).toBeDefined();
+      expect(method!.parent).toBe("handler");
+      expect(method!.visibility).toBe("internal");
+    });
+  });
+
   describe("edge cases", () => {
     it("extracts internal symbols from file with no exports", () => {
       const result = parse("const x = 1;");

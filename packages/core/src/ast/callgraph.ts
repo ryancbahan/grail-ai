@@ -42,13 +42,15 @@ export function callsOf(
   rootPath: string,
   filePath: string,
   symbolName: string,
-  options: { transitive?: boolean; maxDepth?: number } = {}
+  options: { transitive?: boolean; maxDepth?: number; parent?: string } = {}
 ): SymbolRef[] {
   const absPath = path.isAbsolute(filePath) ? filePath : path.resolve(rootPath, filePath);
   const file = files.find((f) => f.filePath === absPath);
   if (!file) return [];
 
-  const symbol = file.node.symbols.find((s) => s.name === symbolName);
+  const symbol = file.node.symbols.find((s) =>
+    s.name === symbolName && (options.parent === undefined || s.parent === options.parent)
+  );
   if (!symbol || !symbol.calls) return [];
 
   if (!options.transitive) {
@@ -99,19 +101,19 @@ export function callersOf(
   rootPath: string,
   filePath: string,
   symbolName: string,
-  options: { transitive?: boolean; maxDepth?: number } = {}
+  options: { transitive?: boolean; maxDepth?: number; parent?: string } = {}
 ): SymbolRef[] {
   const absPath = path.isAbsolute(filePath) ? filePath : path.resolve(rootPath, filePath);
   const rel = path.relative(rootPath, absPath);
 
-  function directCallers(targetFile: string, targetName: string): SymbolRef[] {
+  function directCallers(targetFile: string, targetName: string, targetParent?: string): SymbolRef[] {
     const callers: SymbolRef[] = [];
     for (const { filePath: fPath, node } of files) {
       const fRel = path.relative(rootPath, fPath);
       for (const sym of node.symbols) {
         if (!sym.calls) continue;
         for (const call of sym.calls) {
-          if (call.file === targetFile && call.name === targetName) {
+          if (call.file === targetFile && call.name === targetName && (targetParent === undefined || call.parent === targetParent)) {
             callers.push({
               file: fRel,
               name: sym.name,
@@ -130,7 +132,7 @@ export function callersOf(
   }
 
   if (!options.transitive) {
-    return directCallers(rel, symbolName);
+    return directCallers(rel, symbolName, options.parent);
   }
 
   const maxDepth = options.maxDepth ?? Infinity;
@@ -138,7 +140,7 @@ export function callersOf(
   const result: SymbolRef[] = [];
   visited.add(`${rel}:${symbolName}`);
 
-  let frontier = directCallers(rel, symbolName).map((c) => ({ ref: c, depth: 1 }));
+  let frontier = directCallers(rel, symbolName, options.parent).map((c) => ({ ref: c, depth: 1 }));
 
   while (frontier.length > 0) {
     const next: typeof frontier = [];
