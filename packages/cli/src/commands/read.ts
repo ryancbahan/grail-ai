@@ -8,20 +8,34 @@ registerLanguage(javascript);
 
 export const read: Command = {
   name: "read",
-  run: async (args) => {
-    if (!args[1]) fail("Missing file argument", "Usage: grail <path> read <file> <symbol> [parent]");
-    if (!args[2]) fail("Missing symbol argument", "Usage: grail <path> read <file> <symbol> [parent]");
-    const symbolName = args[2];
-    const parentName = args[3];
-    const { root, language } = await analyze(args[0]);
+  run: async (flags) => {
+    if (!flags.path) fail("Missing --path argument", "Usage: grail-ai read --path <dir> --file <file> --symbol <symbol>");
+    if (!flags.file) fail("Missing --file argument", "Usage: grail-ai read --path <dir> --file <file> --symbol <symbol>");
+    if (!flags.symbol && flags.line === undefined) fail("Missing --symbol or --line argument", "Usage: grail-ai read --path <dir> --file <file> (--symbol <symbol> | --line <n>)");
+    const { root, language } = await analyze(flags.path);
     if (!language) fail("No language detected", "Ensure the project has recognizable marker files or source files");
     const rel = (p: string) => path.relative(root.absolutePath, p);
     const allFiles = collectFiles(root);
-    const filePath = resolveFile(root.absolutePath, args[1]);
-    const location = readSymbol(allFiles, root.absolutePath, language, filePath, symbolName, parentName);
-    if (!location) fail(`Symbol not found: ${symbolName} in ${args[1]}`, "Check the symbol name and file path");
-    const fileNode = findFile(allFiles, filePath);
-    const symData = fileNode?.node.symbols.find((s) => s.name === symbolName && s.parent === parentName);
+    const filePath = resolveFile(root.absolutePath, flags.file);
+    const fileEntry = findFile(allFiles, filePath);
+
+    let symbolName = flags.symbol;
+    let parentName = flags.parent;
+
+    // --line: find the enclosing symbol for a given line number
+    if (flags.line !== undefined && !symbolName) {
+      if (!fileEntry) fail(`File not found: ${flags.file}`, "Check the file path is relative to the project root");
+      const match = fileEntry.node.symbols.find((s) =>
+        s.line !== undefined && s.endLine !== undefined && s.line <= flags.line! && flags.line! <= s.endLine
+      );
+      if (!match) fail(`No symbol found at line ${flags.line} in ${flags.file}`, "Check the line number");
+      symbolName = match.name;
+      parentName = match.parent;
+    }
+
+    const location = readSymbol(allFiles, root.absolutePath, language, filePath, symbolName!, parentName);
+    if (!location) fail(`Symbol not found: ${symbolName} in ${flags.file}`, "Check the symbol name and file path");
+    const symData = fileEntry?.node.symbols.find((s) => s.name === symbolName && s.parent === parentName);
     output({
       file: rel(location.file),
       name: location.name,

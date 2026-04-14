@@ -14,7 +14,7 @@ read           → show me just this one function's implementation
 ## Install
 
 ```bash
-npx grail-ai <path> summary          # no install needed
+npx grail-ai summary --path .          # no install needed
 ```
 
 Or clone and develop:
@@ -23,27 +23,65 @@ Or clone and develop:
 git clone https://github.com/ryancbahan/grail-ai.git
 cd grail-ai
 npm install
-npm run grail-ai -- <path> summary
+npm run build
+npx grail-ai summary --path .
 ```
 
 ## Commands
 
+All commands use named flags. `--path` is required for all analysis commands.
+
 ```bash
-npx grail-ai <path> tree                       # file tree
-npx grail-ai <path> summary [file]             # symbols + deps per file
-npx grail-ai <path> dependencies <file>        # imports with resolved signatures
-npx grail-ai <path> dependents <file>          # consumers with consumed symbols
-npx grail-ai <path> calls <file> <symbol>       # what does this function call
-npx grail-ai <path> callers <file> <symbol>    # what calls this function
-npx grail-ai <path> read <file> <symbol>       # one symbol's source code
-npx grail-ai <path> externals [file]           # external packages
-npx grail-ai <path> entry-points               # files nothing imports
-npx grail-ai <path> cycles                     # circular dependencies
-npx grail-ai <path> files                      # all file paths
-npx grail-ai <path> json                       # full AST as JSON
+npx grail-ai tree --path <dir>                                  # file tree
+npx grail-ai summary --path <dir> [--file <file>]               # symbols + deps per file
+npx grail-ai dependencies --path <dir> --file <file>             # imports with resolved signatures
+npx grail-ai dependents --path <dir> --file <file>               # consumers with consumed symbols
+npx grail-ai calls --path <dir> --file <file> --symbol <sym>     # what does this function call
+npx grail-ai callers --path <dir> --file <file> --symbol <sym>   # what calls this function
+npx grail-ai read --path <dir> --file <file> --symbol <sym>      # one symbol's source code
+npx grail-ai read --path <dir> --file <file> --line <n>          # find enclosing symbol at line
+npx grail-ai externals --path <dir> [--file <file>]              # external packages
+npx grail-ai entry-points --path <dir>                           # files nothing imports
+npx grail-ai cycles --path <dir>                                 # circular dependencies
+npx grail-ai files --path <dir>                                  # all file paths
+npx grail-ai json --path <dir>                                   # full AST as JSON
 ```
 
-All data commands output JSON. Use `--depth <n>` on any command to limit directory traversal.
+### Flags
+
+| Flag | Description |
+|------|-------------|
+| `--path <dir>` | Project directory (required) |
+| `--file <file>` | Target file (relative to project root) |
+| `--symbol <name>` | Target symbol name |
+| `--parent <name>` | Parent container (class/object) for methods |
+| `--line <n>` | Line number (for `read`: find enclosing symbol) |
+| `--depth <n>` | Limit traversal depth |
+| `--transitive` | Follow calls/callers transitively |
+
+### Object literal methods
+
+The call graph resolves functions inside object literals (command patterns, config objects, route handlers):
+
+```ts
+export const cmd: Command = {
+  run: async () => { /* calls are tracked here */ },
+};
+```
+
+These are represented as child symbols with a `parent` field. Query them with `--parent`:
+
+```bash
+npx grail-ai calls --path . --file src/cmd.ts --symbol run --parent cmd
+```
+
+### Read by line number
+
+When you have a line number (e.g., from grep), use `--line` instead of `--symbol` to find and read the enclosing symbol:
+
+```bash
+npx grail-ai read --path . --file src/cmd.ts --line 18
+```
 
 ## MCP Server
 
@@ -66,7 +104,13 @@ Tools: `grail_summary`, `grail_dependencies`, `grail_dependents`, `grail_calls`,
 
 ## Claude Code Skill
 
-Copy `packages/skill/SKILL.md` to `~/.claude/skills/grail/SKILL.md` to give Claude the progressive disclosure workflow. Works with MCP tools or CLI fallback.
+Install the skill for Claude Code:
+
+```bash
+npx grail-ai skill --install
+```
+
+Or copy `packages/skill/SKILL.md` to `~/.claude/skills/grail/SKILL.md`.
 
 ## Monorepo
 
@@ -82,7 +126,7 @@ packages/
 
 ## Adding a Language
 
-Create a package that exports a `LanguageConfig` and registers it:
+Create a package that exports a `LanguageDescriptor` and registers it:
 
 ```ts
 import { registerLanguage } from "@grail-ai/core";
@@ -91,7 +135,7 @@ import { python } from "@grail-ai/lang-python";
 registerLanguage(python);
 ```
 
-See [LanguageConfig interface](packages/core/src/languages/types.ts) for the full contract.
+See [LanguageDescriptor interface](packages/core/src/languages/types.ts) for the full contract.
 
 ## Tests
 

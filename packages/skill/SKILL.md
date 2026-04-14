@@ -14,15 +14,15 @@ Available via MCP or CLI. Both return identical JSON. Use `--depth <n>` to limit
 
 | Command | MCP tool | CLI |
 |---------|----------|-----|
-| Summary | `grail_summary { path, file? }` | `npx grail-ai <path> summary [file]` |
-| Dependencies | `grail_dependencies { path, file }` | `npx grail-ai <path> dependencies <file>` |
-| Dependents | `grail_dependents { path, file }` | `npx grail-ai <path> dependents <file>` |
-| Calls | `grail_calls { path, file, symbol }` | `npx grail-ai <path> calls <file> <symbol>` |
-| Callers | `grail_callers { path, file, symbol }` | `npx grail-ai <path> callers <file> <symbol>` |
-| Read symbol | `grail_read { path, file, symbol, parent? }` | `npx grail-ai <path> read <file> <symbol>` |
-| Externals | `grail_externals { path, file? }` | `npx grail-ai <path> externals [file]` |
-| Entry points | `grail_entry_points { path }` | `npx grail-ai <path> entry-points` |
-| Cycles | `grail_cycles { path }` | `npx grail-ai <path> cycles` |
+| Summary | `grail_summary { path, file? }` | `npx grail-ai summary --path <dir> [--file <file>]` |
+| Dependencies | `grail_dependencies { path, file }` | `npx grail-ai dependencies --path <dir> --file <file>` |
+| Dependents | `grail_dependents { path, file }` | `npx grail-ai dependents --path <dir> --file <file>` |
+| Calls | `grail_calls { path, file, symbol, parent? }` | `npx grail-ai calls --path <dir> --file <file> --symbol <sym> [--parent <name>]` |
+| Callers | `grail_callers { path, file, symbol, parent? }` | `npx grail-ai callers --path <dir> --file <file> --symbol <sym> [--parent <name>]` |
+| Read symbol | `grail_read { path, file, symbol?, parent?, line? }` | `npx grail-ai read --path <dir> --file <file> (--symbol <sym> \| --line <n>)` |
+| Externals | `grail_externals { path, file? }` | `npx grail-ai externals --path <dir> [--file <file>]` |
+| Entry points | `grail_entry_points { path }` | `npx grail-ai entry-points --path <dir>` |
+| Cycles | `grail_cycles { path }` | `npx grail-ai cycles --path <dir>` |
 
 ## Workflow
 
@@ -38,13 +38,17 @@ For relevant files:
 
 ### 3. Call graph (function-level)
 When you need to understand function-to-function relationships:
-- `grail_calls` — what does this function call? Returns callees with their signatures.
+- `grail_calls` — what does this function call? Returns callees with their signatures. Use `--parent` for methods inside object literals (e.g., `--symbol run --parent cmd`).
 - `grail_callers` — what calls this function? Function-level blast radius.
 
-These use the TypeScript compiler for accurate resolution (not heuristic name matching).
+These use the TypeScript compiler for accurate resolution (not heuristic name matching). Object literal methods (command patterns, route handlers, config objects) are fully supported.
 
 ### 4. Read (surgical)
 Only when signatures aren't enough, use `grail_read` to get a specific symbol's source code. Not the whole file — just the function or type.
+
+Two access modes:
+- **By symbol name**: `grail_read { path, file, symbol }` — when you know what you're looking for
+- **By line number**: `grail_read { path, file, line }` — when you have a line from grep and need to know what symbol contains it
 
 ## Rules
 
@@ -53,3 +57,4 @@ Only when signatures aren't enough, use `grail_read` to get a specific symbol's 
 - **Prefer signatures over source** — if summary or dependencies gives you enough, don't read the source
 - **Check dependents before editing** — use `dependents` for file-level and `callers` for function-level blast radius
 - **Never read a full file** when grail can give you just the symbol you need
+- **Use `--line` after grep** — when grep finds a match, use `grail_read` with `line` to get the enclosing symbol with full context

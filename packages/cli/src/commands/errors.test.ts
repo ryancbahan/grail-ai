@@ -29,7 +29,7 @@ function parseOutput(args: string): { error?: string; suggestion?: string } {
 describe("CLI error handling", () => {
   describe("path errors", () => {
     it("returns JSON for nonexistent path", () => {
-      const result = parseOutput("/nonexistent/path summary");
+      const result = parseOutput("summary --path /nonexistent/path");
       expect(result.error).toContain("not found");
       expect(result.suggestion).toBeDefined();
     });
@@ -37,59 +37,59 @@ describe("CLI error handling", () => {
 
   describe("missing arguments", () => {
     it("returns JSON for missing file in dependencies", () => {
-      const result = parseOutput(". dependencies");
+      const result = parseOutput("dependencies --path .");
       expect(result.error).toContain("Missing");
       expect(result.suggestion).toContain("Usage");
     });
 
     it("returns JSON for missing file in dependents", () => {
-      const result = parseOutput(". dependents");
+      const result = parseOutput("dependents --path .");
       expect(result.error).toContain("Missing");
       expect(result.suggestion).toContain("Usage");
     });
 
     it("returns JSON for missing symbol in calls", () => {
-      const result = parseOutput(". calls packages/core/src/analyze.ts");
+      const result = parseOutput("calls --path . --file packages/core/src/analyze.ts");
       expect(result.error).toContain("Missing");
     });
 
     it("returns JSON for missing symbol in callers", () => {
-      const result = parseOutput(". callers packages/core/src/analyze.ts");
+      const result = parseOutput("callers --path . --file packages/core/src/analyze.ts");
       expect(result.error).toContain("Missing");
     });
 
     it("returns JSON for missing file in read", () => {
-      const result = parseOutput(". read");
+      const result = parseOutput("read --path .");
       expect(result.error).toContain("Missing");
     });
 
     it("returns JSON for missing symbol in read", () => {
-      const result = parseOutput(". read packages/core/src/analyze.ts");
+      const result = parseOutput("read --path . --file packages/core/src/analyze.ts");
       expect(result.error).toContain("Missing");
     });
   });
 
   describe("file not found", () => {
     it("returns JSON for nonexistent file in dependencies", () => {
-      const result = parseOutput(". dependencies nonexistent.ts");
+      const result = parseOutput("dependencies --path . --file nonexistent.ts");
       expect(result.error).toContain("not found");
       expect(result.suggestion).toBeDefined();
     });
 
     it("returns JSON for nonexistent file in summary", () => {
-      const result = parseOutput(". summary nonexistent.ts");
+      const result = parseOutput("summary --path . --file nonexistent.ts");
       expect(result.error).toContain("not found");
     });
 
     it("returns JSON for nonexistent file in externals", () => {
-      const result = parseOutput(". externals nonexistent.ts");
+      const result = parseOutput("externals --path . --file nonexistent.ts");
       expect(result.error).toContain("not found");
     });
   });
 
   describe("symbol not found", () => {
     it("returns JSON for nonexistent symbol in read", () => {
-      const result = parseOutput(". read packages/core/src/analyze.ts nonexistent_fn");
+      const result = parseOutput("read --path . --file packages/core/src/analyze.ts --symbol nonexistent_fn");
       expect(result.error).toContain("not found");
       expect(result.suggestion).toBeDefined();
     });
@@ -97,7 +97,7 @@ describe("CLI error handling", () => {
 
   describe("unknown command", () => {
     it("returns JSON for unknown command", () => {
-      const result = parseOutput(". foobar");
+      const result = parseOutput("foobar --path .");
       expect(result.error).toContain("Unknown command");
       expect(result.suggestion).toContain("--help");
     });
@@ -105,19 +105,19 @@ describe("CLI error handling", () => {
 
   describe("output is always valid JSON", () => {
     it("nonexistent path is parseable JSON", () => {
-      const { stdout, exitCode } = run("/nonexistent summary");
+      const { stdout, exitCode } = run("summary --path /nonexistent");
       expect(exitCode).not.toBe(0);
       expect(() => JSON.parse(stdout)).not.toThrow();
     });
 
     it("missing arg is parseable JSON", () => {
-      const { stdout, exitCode } = run(". dependencies");
+      const { stdout, exitCode } = run("dependencies --path .");
       expect(exitCode).not.toBe(0);
       expect(() => JSON.parse(stdout)).not.toThrow();
     });
 
     it("unknown command is parseable JSON", () => {
-      const { stdout, exitCode } = run(". foobar");
+      const { stdout, exitCode } = run("foobar --path .");
       expect(exitCode).not.toBe(0);
       expect(() => JSON.parse(stdout)).not.toThrow();
     });

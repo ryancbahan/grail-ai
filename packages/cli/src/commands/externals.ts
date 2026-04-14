@@ -8,16 +8,16 @@ registerLanguage(javascript);
 
 export const externals: Command = {
   name: "externals",
-  run: async (args, flags) => {
-    const { root } = await analyze(args[0], { depth: flags.depth });
+  run: async (flags) => {
+    if (!flags.path) fail("Missing --path argument", "Usage: grail-ai externals --path <dir> [--file <file>]");
+    const { root } = await analyze(flags.path, { depth: flags.depth });
     const rel = (p: string) => path.relative(root.absolutePath, p);
     const allFiles = collectFiles(root);
-    const fileArg = args[1];
 
-    if (fileArg) {
-      const filePath = resolveFile(root.absolutePath, fileArg);
+    if (flags.file) {
+      const filePath = resolveFile(root.absolutePath, flags.file);
       const file = findFile(allFiles, filePath);
-      if (!file) fail(`File not found: ${fileArg}`, "Check the file path is relative to the project root");
+      if (!file) fail(`File not found: ${flags.file}`, "Check the file path is relative to the project root");
       const exts = [...new Set(file.node.imports.filter((i) => i.isExternal).map((i) => i.specifier))];
       output({ file: rel(filePath), externals: exts });
     } else {
