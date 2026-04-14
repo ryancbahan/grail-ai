@@ -4,6 +4,7 @@
 
 - Push access to `main`
 - `NPM_TOKEN` secret configured in GitHub repo settings
+- `gh` CLI authenticated (`gh auth status`)
 
 ## Steps
 
@@ -21,21 +22,15 @@ This checks out `main`, creates `release/X.Y.Z`, bumps all package versions, com
 
 Open the PR link printed by the script. Review, let CI pass, merge to `main`.
 
-### 3. Tag the release
+### 3. Tag and release
 
 After the PR is merged:
 
 ```bash
-./scripts/tag-release.sh 0.1.1
+./scripts/tag-release.sh 0.2.0
 ```
 
-This checks out `main`, verifies the version matches, tags, and pushes the tag.
-
-### 4. Create GitHub Release
-
-Click the link printed by the script, or go to GitHub → Releases → Create new release. Select the tag, add release notes, publish.
-
-The publish workflow runs automatically — builds, tests, uploads tarball, publishes all packages to npm.
+This checks out `main`, verifies the version matches, tags, pushes the tag, and creates a GitHub release with auto-generated notes. The publish workflow runs automatically — builds, tests, uploads tarball, publishes all packages to npm.
 
 ## Branch Naming
 
