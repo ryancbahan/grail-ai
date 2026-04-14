@@ -26,7 +26,7 @@ export const read: Command = {
     if (flags.line !== undefined && !symbolName) {
       if (!fileEntry) fail(`File not found: ${flags.file}`, "Check the file path is relative to the project root");
       const match = fileEntry.node.symbols.find((s) =>
-        s.line !== undefined && s.endLine !== undefined && s.line <= flags.line! && flags.line! <= s.endLine
+        s.range !== undefined && s.range.start.line <= flags.line! && flags.line! <= s.range.end.line
       );
       if (!match) fail(`No symbol found at line ${flags.line} in ${flags.file}`, "Check the line number");
       symbolName = match.name;
@@ -43,8 +43,7 @@ export const read: Command = {
       parent: location.parent,
       signature: symData?.signature,
       visibility: symData?.visibility,
-      line: location.line,
-      endLine: location.endLine,
+      range: location.range,
       source: location.source,
     });
   },

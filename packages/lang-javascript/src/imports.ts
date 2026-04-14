@@ -1,5 +1,5 @@
 import type { Node, Tree } from "web-tree-sitter";
-import type { ImportedSymbol, ParsedImport } from "@grail-ai/core";
+import type { ImportedSymbol, ParsedImport, Range } from "@grail-ai/core";
 
 export function parseJavaScriptImports(
   _filePath: string,
@@ -12,11 +12,11 @@ export function parseJavaScriptImports(
   const imports: ParsedImport[] = [];
   const seen = new Set<string>();
 
-  function add(specifier: string, kind: ParsedImport["kind"], symbols: ImportedSymbol[]) {
+  function add(specifier: string, kind: ParsedImport["kind"], symbols: ImportedSymbol[], range?: Range) {
     const key = `${kind}:${specifier}`;
     if (!seen.has(key)) {
       seen.add(key);
-      imports.push({ specifier, kind, symbols });
+      imports.push({ specifier, kind, symbols, range });
     }
   }
 
@@ -24,16 +24,23 @@ export function parseJavaScriptImports(
   return imports;
 }
 
+function rangeOf(node: Node): Range {
+  return {
+    start: { line: node.startPosition.row + 1, column: node.startPosition.column },
+    end: { line: node.endPosition.row + 1, column: node.endPosition.column },
+  };
+}
+
 function visit(
   node: Node,
-  add: (specifier: string, kind: ParsedImport["kind"], symbols: ImportedSymbol[]) => void
+  add: (specifier: string, kind: ParsedImport["kind"], symbols: ImportedSymbol[], range?: Range) => void
 ): void {
   switch (node.type) {
     case "import_statement": {
       const source = node.childForFieldName("source");
       if (source) {
         const symbols = extractImportedSymbols(node);
-        add(stripQuotes(source.text), "static", symbols);
+        add(stripQuotes(source.text), "static", symbols, rangeOf(node));
       }
       break;
     }
@@ -41,7 +48,7 @@ function visit(
     case "export_statement": {
       const source = node.childForFieldName("source");
       if (source) {
-        add(stripQuotes(source.text), "static", []);
+        add(stripQuotes(source.text), "static", [], rangeOf(node));
       }
       break;
     }
@@ -53,11 +60,11 @@ function visit(
         const firstArg = args.namedChildren[0];
         if (fn.type === "identifier" && fn.text === "require") {
           if (firstArg && firstArg.type === "string") {
-            add(stripQuotes(firstArg.text), "require", []);
+            add(stripQuotes(firstArg.text), "require", [], rangeOf(node));
           }
         } else if (fn.type === "import") {
           if (firstArg && firstArg.type === "string") {
-            add(stripQuotes(firstArg.text), "dynamic", []);
+            add(stripQuotes(firstArg.text), "dynamic", [], rangeOf(node));
           }
         }
       }

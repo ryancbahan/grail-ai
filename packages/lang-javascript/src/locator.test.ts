@@ -24,8 +24,8 @@ describe("locateJavaScriptSymbol", () => {
       expect(result).not.toBeNull();
       expect(result!.name).toBe("buildTree");
       expect(result!.kind).toBe("function");
-      expect(result!.line).toBe(1);
-      expect(result!.endLine).toBe(3);
+      expect(result!.range!.start.line).toBe(1);
+      expect(result!.range!.end.line).toBe(3);
       expect(result!.source).toContain("export function buildTree");
       expect(result!.source).toContain("return dir;");
     });
@@ -113,13 +113,14 @@ describe("locateJavaScriptSymbol", () => {
     });
   });
 
-  describe("line numbers", () => {
-    it("returns correct line numbers for multi-line function", () => {
+  describe("range", () => {
+    it("returns correct range for multi-line function", () => {
       const content = "const x = 1;\n\nexport function foo() {\n  return x;\n}";
       const result = locate(content, "foo");
       expect(result).not.toBeNull();
-      expect(result!.line).toBe(3);
-      expect(result!.endLine).toBe(5);
+      expect(result!.range!.start.line).toBe(3);
+      expect(typeof result!.range!.start.column).toBe("number");
+      expect(result!.range!.end.line).toBe(5);
     });
   });
 });

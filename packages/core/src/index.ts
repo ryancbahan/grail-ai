@@ -20,6 +20,8 @@ export type {
   DirectoryNode,
   RootNode,
   TreeOptions,
+  Position,
+  Range,
   Import,
   ImportedSymbol,
   Symbol,

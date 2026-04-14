@@ -365,7 +365,9 @@ describe("calls command", () => {
     expect(cu.file).toBe("src/utils.ts");
     expect(cu.kind).toBe("function");
     expect(typeof cu.signature).toBe("string");
-    expect(typeof cu.line).toBe("number");
+    expect(cu.range).toBeDefined();
+    expect(typeof cu.range.start.line).toBe("number");
+    expect(typeof cu.range.start.column).toBe("number");
     expect(typeof cu.context).toBe("string");
   });
 
@@ -416,7 +418,9 @@ describe("callers command", () => {
     const mainCaller = result.callers.find((c: any) => c.name === "main");
     expect(mainCaller.kind).toBe("function");
     expect(typeof mainCaller.signature).toBe("string");
-    expect(typeof mainCaller.line).toBe("number");
+    expect(mainCaller.range).toBeDefined();
+    expect(typeof mainCaller.range.start.line).toBe("number");
+    expect(typeof mainCaller.range.start.column).toBe("number");
     expect(typeof mainCaller.context).toBe("string");
   });
 
@@ -461,8 +465,10 @@ describe("read command", () => {
     expect(result.name).toBe("createUser");
     expect(result.kind).toBe("function");
     expect(result.visibility).toBe("public");
-    expect(typeof result.line).toBe("number");
-    expect(typeof result.endLine).toBe("number");
+    expect(result.range).toBeDefined();
+    expect(typeof result.range.start.line).toBe("number");
+    expect(typeof result.range.end.line).toBe("number");
+    expect(typeof result.range.start.column).toBe("number");
     expect(result.source).toContain("export function createUser");
   });
 
@@ -509,6 +515,28 @@ describe("read command", () => {
       read.run({ path: tmpDir, file: "src/utils.ts", symbol: "nope", transitive: false })
     ).rejects.toThrow("EXIT_1");
     expect(captured.some((c) => typeof c === "string" && c.includes("not found"))).toBe(true);
+  });
+
+  it("reads symbol by --line number using range", async () => {
+    // createUser starts at line 7 in the test fixture
+    await read.run({ path: tmpDir, file: "src/utils.ts", line: 9, transitive: false });
+    const result = getOutput();
+    expect(result.name).toBe("createUser");
+    expect(result.source).toContain("export function createUser");
+  });
+
+  it("reads symbol by --line at boundary (first line)", async () => {
+    // validateEmail starts at line 3
+    await read.run({ path: tmpDir, file: "src/utils.ts", line: 3, transitive: false });
+    const result = getOutput();
+    expect(result.name).toBe("validateEmail");
+  });
+
+  it("fails for --line outside any symbol", async () => {
+    await expect(
+      read.run({ path: tmpDir, file: "src/utils.ts", line: 999, transitive: false })
+    ).rejects.toThrow("EXIT_1");
+    expect(captured.some((c) => typeof c === "string" && c.includes("No symbol found"))).toBe(true);
   });
 });
 

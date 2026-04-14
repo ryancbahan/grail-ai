@@ -199,10 +199,21 @@ function resolveCall(call: CallExpression, projectRoot: string): SymbolRef | nul
 
     if (!calleeName) return null;
 
-    const callLine = call.getStartLineNumber();
+    const sourceFile = call.getSourceFile();
+    const callStart = sourceFile.getLineAndColumnAtPos(call.getStart());
+    const callEnd = sourceFile.getLineAndColumnAtPos(call.getEnd());
     const callContext = call.getFullText().trim().split("\n")[0];
 
-    return { file: rel, name: calleeName, parent, line: callLine, context: callContext };
+    return {
+      file: rel,
+      name: calleeName,
+      parent,
+      range: {
+        start: { line: callStart.line, column: callStart.column - 1 },
+        end: { line: callEnd.line, column: callEnd.column - 1 },
+      },
+      context: callContext,
+    };
   } catch {
     return null;
   }

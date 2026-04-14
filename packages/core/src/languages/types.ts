@@ -1,4 +1,4 @@
-import { TreeOptions, Import, ImportedSymbol, Symbol, SymbolLocation, FileEntry } from "../ast/types";
+import { TreeOptions, Range, Import, ImportedSymbol, Symbol, SymbolLocation, FileEntry } from "../ast/types";
 
 export interface ResolveContext {
   containingFile: string;
@@ -9,6 +9,7 @@ export interface ParsedImport {
   specifier: string;
   kind: Import["kind"];
   symbols: ImportedSymbol[];
+  range?: Range;
 }
 
 export interface GrammarMapping {
