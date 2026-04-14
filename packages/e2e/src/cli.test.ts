@@ -10,7 +10,7 @@ const JS_APP = path.resolve(__dirname, "../test-examples/js/sample-app");
 
 describe("e2e: tree", () => {
   it("outputs JSON with root, language, and tree structure", () => {
-    const result = json(`${TS_APP} tree`);
+    const result = json(`tree --path ${TS_APP}`);
     expect(result.root).toBe(TS_APP);
     expect(result.language).toBe("javascript");
     expect(result.tree.name).toBe("sample-app");
@@ -19,7 +19,7 @@ describe("e2e: tree", () => {
   });
 
   it("contains all expected files and directories", () => {
-    const result = json(`${TS_APP} tree`);
+    const result = json(`tree --path ${TS_APP}`);
     const src = result.tree.children.find((c: any) => c.name === "src");
     expect(src).toBeDefined();
     expect(src.type).toBe("directory");
@@ -34,7 +34,7 @@ describe("e2e: tree", () => {
   });
 
   it("files have extension, directories have children", () => {
-    const result = json(`${TS_APP} tree`);
+    const result = json(`tree --path ${TS_APP}`);
     const src = result.tree.children.find((c: any) => c.name === "src");
     const indexTs = src.children.find((c: any) => c.name === "index.ts");
     expect(indexTs.type).toBe("file");
@@ -46,7 +46,7 @@ describe("e2e: tree", () => {
   });
 
   it("does not include node_modules or .git", () => {
-    const result = json(`${TS_APP} tree`);
+    const result = json(`tree --path ${TS_APP}`);
     const names = result.tree.children.map((c: any) => c.name);
     expect(names).not.toContain("node_modules");
     expect(names).not.toContain(".git");
@@ -55,7 +55,7 @@ describe("e2e: tree", () => {
 
 describe("e2e: summary", () => {
   it("lists all files with correct structure per entry", () => {
-    const result = json(`${TS_APP} summary`);
+    const result = json(`summary --path ${TS_APP}`);
     expect(Array.isArray(result)).toBe(true);
 
     for (const entry of result) {
@@ -67,7 +67,7 @@ describe("e2e: summary", () => {
   });
 
   it("contains exactly the expected files", () => {
-    const result = json(`${TS_APP} summary`);
+    const result = json(`summary --path ${TS_APP}`);
     const files = result.map((f: any) => f.file).sort();
     expect(files).toEqual([
       "package.json",
@@ -79,7 +79,7 @@ describe("e2e: summary", () => {
   });
 
   it("symbols have unified SymbolRef shape with file, name, kind, signature, visibility", () => {
-    const result = json(`${TS_APP} summary`);
+    const result = json(`summary --path ${TS_APP}`);
     const utils = result.find((f: any) => f.file === "src/utils.ts");
     expect(utils.symbols.length).toBe(3); // createUser, formatUser, validateEmail
 
@@ -93,7 +93,7 @@ describe("e2e: summary", () => {
   });
 
   it("single file summary includes symbols and imports", () => {
-    const result = json(`${TS_APP} summary src/utils.ts`);
+    const result = json(`summary --path ${TS_APP} --file src/utils.ts`);
     expect(result.file).toBe("src/utils.ts");
 
     const names = result.symbols.map((s: any) => s.name);
@@ -108,7 +108,7 @@ describe("e2e: summary", () => {
   });
 
   it("types-only file has correct symbol kinds", () => {
-    const result = json(`${TS_APP} summary src/types.ts`);
+    const result = json(`summary --path ${TS_APP} --file src/types.ts`);
     const kinds = result.symbols.map((s: any) => s.kind);
     expect(kinds).toContain("interface");
     expect(kinds).toContain("type");
@@ -118,7 +118,7 @@ describe("e2e: summary", () => {
 
 describe("e2e: files", () => {
   it("returns exact file list", () => {
-    const result = json(`${TS_APP} files`);
+    const result = json(`files --path ${TS_APP}`);
     expect(result.files.sort()).toEqual([
       "package.json",
       "src/index.ts",
@@ -131,7 +131,7 @@ describe("e2e: files", () => {
 
 describe("e2e: json", () => {
   it("returns valid root node", () => {
-    const result = json(`${TS_APP} json`);
+    const result = json(`json --path ${TS_APP}`);
     expect(result.type).toBe("root");
     expect(result.absolutePath).toBe(TS_APP);
     expect(result.tree.type).toBe("directory");
@@ -144,7 +144,7 @@ describe("e2e: json", () => {
 
 describe("e2e: dependencies", () => {
   it("shows exact imports for index.ts", () => {
-    const result = json(`${TS_APP} dependencies src/index.ts`);
+    const result = json(`dependencies --path ${TS_APP} --file src/index.ts`);
     expect(result.file).toBe("src/index.ts");
     expect(result.dependencies.length).toBe(2); // ./utils and ./types
 
@@ -163,21 +163,21 @@ describe("e2e: dependencies", () => {
   });
 
   it("marks type-only imports correctly", () => {
-    const result = json(`${TS_APP} dependencies src/index.ts`);
+    const result = json(`dependencies --path ${TS_APP} --file src/index.ts`);
     const typesDep = result.dependencies.find((d: any) => d.specifier === "./types");
     expect(typesDep).toBeDefined();
     expect(typesDep.resolvedPath).toBe("src/types.ts");
   });
 
   it("file with no imports returns empty dependencies", () => {
-    const result = json(`${TS_APP} dependencies src/types.ts`);
+    const result = json(`dependencies --path ${TS_APP} --file src/types.ts`);
     expect(result.dependencies).toEqual([]);
   });
 });
 
 describe("e2e: dependents", () => {
   it("shows exact consumers of utils.ts", () => {
-    const result = json(`${TS_APP} dependents src/utils.ts`);
+    const result = json(`dependents --path ${TS_APP} --file src/utils.ts`);
     expect(result.file).toBe("src/utils.ts");
     expect(result.dependents.length).toBe(1);
 
@@ -196,12 +196,12 @@ describe("e2e: dependents", () => {
   });
 
   it("file with no dependents returns empty array", () => {
-    const result = json(`${TS_APP} dependents src/index.ts`);
+    const result = json(`dependents --path ${TS_APP} --file src/index.ts`);
     expect(result.dependents).toEqual([]);
   });
 
   it("types.ts is depended on by multiple files", () => {
-    const result = json(`${TS_APP} dependents src/types.ts`);
+    const result = json(`dependents --path ${TS_APP} --file src/types.ts`);
     const depFiles = result.dependents.map((d: any) => d.file).sort();
     expect(depFiles).toContain("src/utils.ts");
     expect(depFiles).toContain("src/service.ts");
@@ -210,26 +210,26 @@ describe("e2e: dependents", () => {
 
 describe("e2e: externals", () => {
   it("returns empty for project with no npm imports", () => {
-    const result = json(`${TS_APP} externals`);
+    const result = json(`externals --path ${TS_APP}`);
     expect(result.externals).toEqual([]);
   });
 });
 
 describe("e2e: entry-points", () => {
   it("index.ts is an entry point (nothing imports it)", () => {
-    const result = json(`${TS_APP} entry-points`);
+    const result = json(`entry-points --path ${TS_APP}`);
     expect(result.entryPoints).toContain("src/index.ts");
   });
 
   it("utils.ts is NOT an entry point (index.ts imports it)", () => {
-    const result = json(`${TS_APP} entry-points`);
+    const result = json(`entry-points --path ${TS_APP}`);
     expect(result.entryPoints).not.toContain("src/utils.ts");
   });
 });
 
 describe("e2e: cycles", () => {
   it("returns empty for acyclic project", () => {
-    const result = json(`${TS_APP} cycles`);
+    const result = json(`cycles --path ${TS_APP}`);
     expect(result.cycles).toEqual([]);
   });
 });
@@ -238,7 +238,7 @@ describe("e2e: cycles", () => {
 
 describe("e2e: calls", () => {
   it("main() calls createUser and formatUser with full SymbolRef", () => {
-    const result = json(`${TS_APP} calls src/index.ts main`);
+    const result = json(`calls --path ${TS_APP} --file src/index.ts --symbol main`);
     expect(result.file).toBe("src/index.ts");
     expect(result.name).toBe("main");
 
@@ -258,7 +258,7 @@ describe("e2e: calls", () => {
   });
 
   it("createUser() calls internal validateEmail", () => {
-    const result = json(`${TS_APP} calls src/utils.ts createUser`);
+    const result = json(`calls --path ${TS_APP} --file src/utils.ts --symbol createUser`);
     const validateCall = result.calls.find((c: any) => c.name === "validateEmail");
     expect(validateCall).toBeDefined();
     expect(validateCall.file).toBe("src/utils.ts");
@@ -267,13 +267,13 @@ describe("e2e: calls", () => {
   });
 
   it("function with no project calls returns empty array", () => {
-    const result = json(`${TS_APP} calls src/utils.ts formatUser`);
+    const result = json(`calls --path ${TS_APP} --file src/utils.ts --symbol formatUser`);
     // formatUser only calls template literal methods — no project calls
     expect(result.calls).toEqual([]);
   });
 
   it("does not include external stdlib calls", () => {
-    const result = json(`${TS_APP} calls src/index.ts main`);
+    const result = json(`calls --path ${TS_APP} --file src/index.ts --symbol main`);
     const callNames = result.calls.map((c: any) => c.name);
     expect(callNames).not.toContain("log"); // console.log is external
     expect(callNames).not.toContain("console");
@@ -282,7 +282,7 @@ describe("e2e: calls", () => {
 
 describe("e2e: callers", () => {
   it("createUser is called by main and App.addUser with full SymbolRef", () => {
-    const result = json(`${TS_APP} callers src/utils.ts createUser`);
+    const result = json(`callers --path ${TS_APP} --file src/utils.ts --symbol createUser`);
     expect(result.file).toBe("src/utils.ts");
     expect(result.name).toBe("createUser");
     expect(result.callers.length).toBeGreaterThanOrEqual(1);
@@ -298,7 +298,7 @@ describe("e2e: callers", () => {
   });
 
   it("function with no callers returns empty array", () => {
-    const result = json(`${TS_APP} callers src/index.ts main`);
+    const result = json(`callers --path ${TS_APP} --file src/index.ts --symbol main`);
     expect(result.callers).toEqual([]);
   });
 });
@@ -306,7 +306,7 @@ describe("e2e: callers", () => {
 describe("e2e: transitive calls", () => {
   it("--transitive follows the full call chain", () => {
     // main -> createUser -> validateEmail
-    const result = json(`${TS_APP} calls src/index.ts main --transitive`);
+    const result = json(`calls --path ${TS_APP} --file src/index.ts --symbol main --transitive`);
     const names = result.calls.map((c: any) => c.name);
     expect(names).toContain("createUser");
     expect(names).toContain("validateEmail"); // transitive — createUser calls validateEmail
@@ -314,12 +314,12 @@ describe("e2e: transitive calls", () => {
   });
 
   it("--transitive without --depth returns all reachable calls", () => {
-    const result = json(`${TS_APP} calls src/index.ts main --transitive`);
+    const result = json(`calls --path ${TS_APP} --file src/index.ts --symbol main --transitive`);
     expect(result.calls.length).toBeGreaterThan(2); // more than direct calls
   });
 
   it("--transitive --depth 1 returns only direct calls", () => {
-    const result = json(`${TS_APP} calls src/index.ts main --transitive --depth 1`);
+    const result = json(`calls --path ${TS_APP} --file src/index.ts --symbol main --transitive --depth 1`);
     const names = result.calls.map((c: any) => c.name);
     expect(names).toContain("createUser");
     expect(names).toContain("formatUser");
@@ -327,7 +327,7 @@ describe("e2e: transitive calls", () => {
   });
 
   it("calls are ordered leaves-first", () => {
-    const result = json(`${TS_APP} calls src/index.ts main --transitive`);
+    const result = json(`calls --path ${TS_APP} --file src/index.ts --symbol main --transitive`);
     if (result.calls.length >= 2) {
       const validateIdx = result.calls.findIndex((c: any) => c.name === "validateEmail");
       const createIdx = result.calls.findIndex((c: any) => c.name === "createUser");
@@ -341,14 +341,14 @@ describe("e2e: transitive calls", () => {
 describe("e2e: transitive callers", () => {
   it("--transitive follows the full caller chain (blast radius)", () => {
     // validateEmail <- createUser <- main, addUser
-    const result = json(`${TS_APP} callers src/utils.ts validateEmail --transitive`);
+    const result = json(`callers --path ${TS_APP} --file src/utils.ts --symbol validateEmail --transitive`);
     const names = result.callers.map((c: any) => c.name);
     expect(names).toContain("createUser"); // direct
     expect(names.length).toBeGreaterThanOrEqual(2); // transitive callers of createUser
   });
 
   it("--transitive --depth 1 returns only direct callers", () => {
-    const result = json(`${TS_APP} callers src/utils.ts validateEmail --transitive --depth 1`);
+    const result = json(`callers --path ${TS_APP} --file src/utils.ts --symbol validateEmail --transitive --depth 1`);
     expect(result.callers).toHaveLength(1);
     expect(result.callers[0].name).toBe("createUser");
   });
@@ -356,7 +356,7 @@ describe("e2e: transitive callers", () => {
 
 describe("e2e: read", () => {
   it("reads function with complete unified shape", () => {
-    const result = json(`${TS_APP} read src/utils.ts createUser`);
+    const result = json(`read --path ${TS_APP} --file src/utils.ts --symbol createUser`);
     expect(result.file).toBe("src/utils.ts");
     expect(result.name).toBe("createUser");
     expect(result.kind).toBe("function");
@@ -371,7 +371,7 @@ describe("e2e: read", () => {
   });
 
   it("reads internal function", () => {
-    const result = json(`${TS_APP} read src/utils.ts validateEmail`);
+    const result = json(`read --path ${TS_APP} --file src/utils.ts --symbol validateEmail`);
     expect(result.name).toBe("validateEmail");
     expect(result.kind).toBe("function");
     expect(result.line).toBe(3);
@@ -380,7 +380,7 @@ describe("e2e: read", () => {
   });
 
   it("reads interface", () => {
-    const result = json(`${TS_APP} read src/types.ts User`);
+    const result = json(`read --path ${TS_APP} --file src/types.ts --symbol User`);
     expect(result.name).toBe("User");
     expect(result.kind).toBe("interface");
     expect(result.source).toContain("id: number");
@@ -388,7 +388,7 @@ describe("e2e: read", () => {
   });
 
   it("reads class method with parent", () => {
-    const result = json(`${TS_APP} read src/service.ts findByEmail UserService`);
+    const result = json(`read --path ${TS_APP} --file src/service.ts --symbol findByEmail --parent UserService`);
     expect(result.name).toBe("findByEmail");
     expect(result.kind).toBe("method");
     expect(result.source).toContain("email");
@@ -396,7 +396,7 @@ describe("e2e: read", () => {
   });
 
   it("reads type alias", () => {
-    const result = json(`${TS_APP} read src/types.ts UserRole`);
+    const result = json(`read --path ${TS_APP} --file src/types.ts --symbol UserRole`);
     expect(result.name).toBe("UserRole");
     expect(result.kind).toBe("type");
     expect(result.source).toContain("admin");
@@ -408,7 +408,7 @@ describe("e2e: read", () => {
 
 describe("e2e: internal symbols", () => {
   it("validateEmail appears as internal in summary", () => {
-    const result = json(`${TS_APP} summary src/utils.ts`);
+    const result = json(`summary --path ${TS_APP} --file src/utils.ts`);
     const validateEmail = result.symbols.find((s: any) => s.name === "validateEmail");
     expect(validateEmail.visibility).toBe("internal");
     expect(validateEmail.kind).toBe("function");
@@ -416,7 +416,7 @@ describe("e2e: internal symbols", () => {
   });
 
   it("exported symbols appear as public", () => {
-    const result = json(`${TS_APP} summary src/utils.ts`);
+    const result = json(`summary --path ${TS_APP} --file src/utils.ts`);
     const createUser = result.symbols.find((s: any) => s.name === "createUser");
     expect(createUser.visibility).toBe("public");
   });
@@ -426,7 +426,7 @@ describe("e2e: internal symbols", () => {
 
 describe("e2e: depth", () => {
   it("--depth 1 shows only top-level entries", () => {
-    const result = json(`${TS_APP} summary --depth 1`);
+    const result = json(`summary --path ${TS_APP} --depth 1`);
     const files = result.map((f: any) => f.file);
     expect(files).toContain("package.json");
     expect(files.every((f: string) => !f.includes("/"))).toBe(true);
@@ -434,7 +434,7 @@ describe("e2e: depth", () => {
   });
 
   it("tree --depth 1 shows directories as empty", () => {
-    const result = json(`${TS_APP} tree --depth 1`);
+    const result = json(`tree --path ${TS_APP} --depth 1`);
     const src = result.tree.children.find((c: any) => c.name === "src");
     expect(src).toBeDefined();
     expect(src.type).toBe("directory");
@@ -442,7 +442,7 @@ describe("e2e: depth", () => {
   });
 
   it("no depth flag shows full depth", () => {
-    const result = json(`${TS_APP} files`);
+    const result = json(`files --path ${TS_APP}`);
     expect(result.files.some((f: string) => f.includes("/"))).toBe(true);
   });
 });
@@ -451,7 +451,7 @@ describe("e2e: depth", () => {
 
 describe("e2e: file path as input", () => {
   it("finds project root from a file path", () => {
-    const result = json(`${TS_APP}/src/index.ts summary`);
+    const result = json(`summary --path ${TS_APP}/src/index.ts`);
     expect(Array.isArray(result)).toBe(true);
     const files = result.map((f: any) => f.file);
     expect(files).toContain("src/index.ts");
@@ -464,50 +464,50 @@ describe("e2e: file path as input", () => {
 
 describe("e2e: errors", () => {
   it("nonexistent path returns JSON with error and suggestion", () => {
-    const result = jsonError("/nonexistent/path summary");
+    const result = jsonError("summary --path /nonexistent/path");
     expect(typeof result.error).toBe("string");
     expect(typeof result.suggestion).toBe("string");
     expect(result.error.toLowerCase()).toContain("not found");
   });
 
   it("nonexistent file returns JSON error", () => {
-    const result = jsonError(`${TS_APP} dependencies nonexistent.ts`);
+    const result = jsonError(`dependencies --path ${TS_APP} --file nonexistent.ts`);
     expect(result.error).toContain("not found");
     expect(result.suggestion).toBeDefined();
   });
 
   it("nonexistent symbol returns JSON error", () => {
-    const result = jsonError(`${TS_APP} read src/utils.ts nonexistent_fn`);
+    const result = jsonError(`read --path ${TS_APP} --file src/utils.ts --symbol nonexistent_fn`);
     expect(result.error).toContain("not found");
     expect(result.error).toContain("nonexistent_fn");
   });
 
   it("unknown command returns JSON error with help suggestion", () => {
-    const result = jsonError(`${TS_APP} foobar`);
+    const result = jsonError(`foobar --path ${TS_APP}`);
     expect(result.error).toContain("Unknown command");
     expect(result.error).toContain("foobar");
     expect(result.suggestion).toContain("--help");
   });
 
   it("missing file argument returns JSON error with usage", () => {
-    const result = jsonError(`${TS_APP} dependencies`);
+    const result = jsonError(`dependencies --path ${TS_APP}`);
     expect(result.error).toContain("Missing");
     expect(result.suggestion).toContain("Usage");
   });
 
   it("missing symbol argument returns JSON error with usage", () => {
-    const result = jsonError(`${TS_APP} read src/utils.ts`);
+    const result = jsonError(`read --path ${TS_APP} --file src/utils.ts`);
     expect(result.error).toContain("Missing");
     expect(result.suggestion).toContain("Usage");
   });
 
   it("missing both file and symbol for calls returns JSON error", () => {
-    const result = jsonError(`${TS_APP} calls`);
+    const result = jsonError(`calls --path ${TS_APP}`);
     expect(result.error).toContain("Missing");
   });
 
   it("error output never contains stack traces", () => {
-    const result = jsonError("/nonexistent/path summary");
+    const result = jsonError("summary --path /nonexistent/path");
     expect(JSON.stringify(result)).not.toContain("at Object");
     expect(JSON.stringify(result)).not.toContain("at Module");
     expect(JSON.stringify(result)).not.toContain(".js:");
@@ -518,12 +518,12 @@ describe("e2e: errors", () => {
 
 describe("e2e: JS files", () => {
   it("detects language from package.json", () => {
-    const result = json(`${JS_APP} tree`);
+    const result = json(`tree --path ${JS_APP}`);
     expect(result.language).toBe("javascript");
   });
 
   it("summary shows JS symbols", () => {
-    const result = json(`${JS_APP} summary helper.js`);
+    const result = json(`summary --path ${JS_APP} --file helper.js`);
     expect(result.file).toBe("helper.js");
     const names = result.symbols.map((s: any) => s.name);
     expect(names).toContain("greet");
@@ -531,7 +531,7 @@ describe("e2e: JS files", () => {
   });
 
   it("reads JS function source", () => {
-    const result = json(`${JS_APP} read helper.js greet`);
+    const result = json(`read --path ${JS_APP} --file helper.js --symbol greet`);
     expect(result.name).toBe("greet");
     expect(result.kind).toBe("function");
     expect(result.source).toContain("Hello");
@@ -543,7 +543,7 @@ describe("e2e: JS files", () => {
 
 describe("e2e: TS classes", () => {
   it("class and methods appear in summary", () => {
-    const result = json(`${TS_APP} summary src/service.ts`);
+    const result = json(`summary --path ${TS_APP} --file src/service.ts`);
     const names = result.symbols.map((s: any) => s.name);
     expect(names).toContain("UserService");
     expect(names).toContain("add");
@@ -552,14 +552,14 @@ describe("e2e: TS classes", () => {
   });
 
   it("methods have correct parent", () => {
-    const result = json(`${TS_APP} summary src/service.ts`);
+    const result = json(`summary --path ${TS_APP} --file src/service.ts`);
     const findByEmail = result.symbols.find((s: any) => s.name === "findByEmail");
     expect(findByEmail.parent).toBe("UserService");
     expect(findByEmail.kind).toBe("method");
   });
 
   it("cross-file import resolves with signature", () => {
-    const result = json(`${TS_APP} dependencies src/service.ts`);
+    const result = json(`dependencies --path ${TS_APP} --file src/service.ts`);
     const typesImport = result.dependencies.find((d: any) => d.specifier === "./types");
     expect(typesImport.resolvedPath).toBe("src/types.ts");
     expect(typesImport.symbols.length).toBe(1);
@@ -586,7 +586,7 @@ describe("e2e: skill", () => {
     const skillPath = path.join(tmpDir, "SKILL.md");
 
     try {
-      const result = json(`skill --install ${skillPath}`);
+      const result = json(`skill --install --path ${skillPath}`);
       expect(result.installed).toBe(skillPath);
       expect(fs.existsSync(skillPath)).toBe(true);
 
@@ -616,7 +616,7 @@ describe("e2e: skill", () => {
     const skillPath = path.join(tmpDir, "deep", "nested", "SKILL.md");
 
     try {
-      const result = json(`skill --install ${skillPath}`);
+      const result = json(`skill --install --path ${skillPath}`);
       expect(result.installed).toBe(skillPath);
       expect(fs.existsSync(skillPath)).toBe(true);
     } finally {

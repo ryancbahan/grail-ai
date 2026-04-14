@@ -2,7 +2,7 @@ import { analyze, registerLanguage, collectFiles } from "@grail-ai/core";
 import type { ASTNode } from "@grail-ai/core";
 import { javascript } from "@grail-ai/lang-javascript";
 import type { Command } from "../types";
-import { output } from "../utils/util";
+import { fail, output } from "../utils/util";
 
 registerLanguage(javascript);
 
@@ -19,8 +19,9 @@ function toTreeJson(node: ASTNode): object {
 
 export const tree: Command = {
   name: "tree",
-  run: async (args, flags) => {
-    const { root, language } = await analyze(args[0], { depth: flags.depth });
+  run: async (flags) => {
+    if (!flags.path) fail("Missing --path argument", "Usage: grail-ai tree --path <dir>");
+    const { root, language } = await analyze(flags.path, { depth: flags.depth });
     output({
       root: root.absolutePath,
       language: language?.descriptor.name ?? null,

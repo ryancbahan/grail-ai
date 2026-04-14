@@ -4,25 +4,41 @@ const HELP = `
 grail - codebase analyzer
 
 Usage:
-  grail <path>                          Show file tree
-  grail <path> summary [file]           File summaries with symbols + deps
-  grail <path> dependencies <file>      What a file imports (with signatures)
-  grail <path> dependents <file>        What imports a file (with consumed symbols)
-  grail <path> externals [file]         External packages
-  grail <path> entry-points             Files nothing imports
-  grail <path> cycles                   Circular dependencies
-  grail <path> files                    List all file paths
-  grail <path> calls <file> <symbol>    What does this function call (with signatures)
-  grail <path> callers <file> <symbol>  What calls this function
-  grail <path> read <file> <symbol>     Read a symbol's source code
-  grail <path> json                     Full AST as JSON
+  grail-ai <command> [flags]
 
-  grail skill                           Print Claude Code skill to stdout
-  grail skill --install [path]          Install skill to a path (default: .claude/skills/grail/SKILL.md)
+Commands:
+  tree                     Show file tree
+  summary                  File summaries with symbols + deps
+  dependencies             What a file imports (with signatures)
+  dependents               What imports a file (with consumed symbols)
+  externals                External packages
+  entry-points             Files nothing imports
+  cycles                   Circular dependencies
+  files                    List all file paths
+  calls                    What does this function call
+  callers                  What calls this function
+  read                     Read a symbol's source code
+  json                     Full AST as JSON
+  skill                    Print or install Claude Code skill
 
-Options:
-  --depth <n>                           Limit traversal depth (directory or call chain)
-  --transitive                          Follow calls/callers transitively (full chain)
+Flags:
+  --path <dir>             Project directory (required for all analysis commands)
+  --file <file>            Target file (relative to project root)
+  --symbol <name>          Target symbol name
+  --parent <name>          Parent container (class/object) for methods
+  --line <n>               Line number (for read: find enclosing symbol)
+  --depth <n>              Limit traversal depth
+  --transitive             Follow calls/callers transitively
+  --install                Install skill (with skill command)
+
+Examples:
+  grail-ai summary --path .
+  grail-ai summary --path . --file src/index.ts
+  grail-ai dependencies --path . --file src/index.ts
+  grail-ai calls --path . --file src/cmd.ts --symbol run --parent cmd
+  grail-ai read --path . --file src/cmd.ts --symbol run --parent cmd
+  grail-ai read --path . --file src/cmd.ts --line 18
+  grail-ai skill --install
 `.trim();
 
 export const help: Command = {

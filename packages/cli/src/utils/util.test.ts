@@ -67,32 +67,32 @@ describe("lookupSymbol", () => {
 });
 
 describe("parseArgs", () => {
-  it("defaults to tree command when only path is given", () => {
-    const result = parseArgs(["./src"]);
-    expect(result.commandName).toBe("tree");
-    expect(result.args).toEqual(["./src"]);
+  it("defaults to help command when nothing is given", () => {
+    const result = parseArgs([]);
+    expect(result.commandName).toBe("help");
   });
 
-  it("parses path and command", () => {
-    const result = parseArgs(["./src", "summary"]);
+  it("parses command name as first positional arg", () => {
+    const result = parseArgs(["summary", "--path", "./src"]);
     expect(result.commandName).toBe("summary");
-    expect(result.args).toEqual(["./src"]);
+    expect(result.flags.path).toBe("./src");
   });
 
-  it("passes extra args after command", () => {
-    const result = parseArgs(["./src", "dependencies", "src/index.ts"]);
+  it("parses --path flag", () => {
+    const result = parseArgs(["dependencies", "--path", "./src", "--file", "src/index.ts"]);
     expect(result.commandName).toBe("dependencies");
-    expect(result.args).toEqual(["./src", "src/index.ts"]);
+    expect(result.flags.path).toBe("./src");
+    expect(result.flags.file).toBe("src/index.ts");
   });
 
   it("parses --depth flag", () => {
-    const result = parseArgs(["./src", "tree", "--depth", "2"]);
+    const result = parseArgs(["tree", "--path", "./src", "--depth", "2"]);
     expect(result.flags.depth).toBe(2);
     expect(result.commandName).toBe("tree");
   });
 
   it("parses --transitive flag", () => {
-    const result = parseArgs(["./src", "calls", "file.ts", "fn", "--transitive"]);
+    const result = parseArgs(["calls", "--path", "./src", "--file", "file.ts", "--symbol", "fn", "--transitive"]);
     expect(result.flags.transitive).toBe(true);
   });
 
@@ -101,31 +101,42 @@ describe("parseArgs", () => {
     expect(result.flags.install).toBe(true);
   });
 
-  it("handles skill command without path prefix", () => {
-    const result = parseArgs(["skill"]);
-    expect(result.commandName).toBe("skill");
-    expect(result.args).toEqual([]);
+  it("parses --symbol and --parent flags", () => {
+    const result = parseArgs(["calls", "--path", "./src", "--file", "file.ts", "--symbol", "run", "--parent", "cmd"]);
+    expect(result.commandName).toBe("calls");
+    expect(result.flags.symbol).toBe("run");
+    expect(result.flags.parent).toBe("cmd");
   });
 
-  it("passes args after skill command", () => {
-    const result = parseArgs(["skill", "--install", "/custom/path"]);
+  it("parses --line flag", () => {
+    const result = parseArgs(["read", "--path", "./src", "--file", "file.ts", "--line", "18"]);
+    expect(result.flags.line).toBe(18);
+  });
+
+  it("handles skill command", () => {
+    const result = parseArgs(["skill"]);
     expect(result.commandName).toBe("skill");
-    expect(result.flags.install).toBe(true);
-    expect(result.args).toEqual(["/custom/path"]);
   });
 
   it("defaults all flags to off", () => {
-    const result = parseArgs(["./src"]);
+    const result = parseArgs(["tree"]);
     expect(result.flags.depth).toBeUndefined();
     expect(result.flags.transitive).toBe(false);
     expect(result.flags.install).toBe(false);
+    expect(result.flags.path).toBeUndefined();
+    expect(result.flags.file).toBeUndefined();
+    expect(result.flags.symbol).toBeUndefined();
+    expect(result.flags.parent).toBeUndefined();
+    expect(result.flags.line).toBeUndefined();
   });
 
   it("handles multiple flags together", () => {
-    const result = parseArgs(["./src", "calls", "file.ts", "fn", "--depth", "3", "--transitive"]);
+    const result = parseArgs(["calls", "--path", "./src", "--file", "file.ts", "--symbol", "fn", "--depth", "3", "--transitive"]);
     expect(result.flags.depth).toBe(3);
     expect(result.flags.transitive).toBe(true);
     expect(result.commandName).toBe("calls");
-    expect(result.args).toEqual(["./src", "file.ts", "fn"]);
+    expect(result.flags.path).toBe("./src");
+    expect(result.flags.file).toBe("file.ts");
+    expect(result.flags.symbol).toBe("fn");
   });
 });

@@ -26,8 +26,12 @@ function text(result: string) {
   return { content: [{ type: "text" as const, text: result }] };
 }
 
-function depthFlag(depth?: number): string {
-  return depth !== undefined ? ` --depth ${depth}` : "";
+function flag(name: string, value: string | number | undefined): string {
+  return value !== undefined ? ` --${name} ${value}` : "";
+}
+
+function boolFlag(name: string, value: boolean | undefined): string {
+  return value ? ` --${name}` : "";
 }
 
 const server = new McpServer({ name: "grail", version });
@@ -40,7 +44,7 @@ server.registerTool("grail_summary", {
     depth: z.number().optional().describe("Optional: limit directory traversal depth"),
   },
 }, async ({ path: p, file, depth }) => text(grail(
-  file ? `${p} summary ${file}${depthFlag(depth)}` : `${p} summary${depthFlag(depth)}`
+  `summary --path ${p}${flag("file", file)}${flag("depth", depth)}`
 )));
 
 server.registerTool("grail_dependencies", {
@@ -49,7 +53,7 @@ server.registerTool("grail_dependencies", {
     path: z.string().describe("Path to the project directory"),
     file: z.string().describe("Relative path to the file"),
   },
-}, async ({ path: p, file }) => text(grail(`${p} dependencies ${file}`)));
+}, async ({ path: p, file }) => text(grail(`dependencies --path ${p} --file ${file}`)));
 
 server.registerTool("grail_dependents", {
   description: "Show what files import a given file and which symbols each consumer uses.",
@@ -57,18 +61,19 @@ server.registerTool("grail_dependents", {
     path: z.string().describe("Path to the project directory"),
     file: z.string().describe("Relative path to the file"),
   },
-}, async ({ path: p, file }) => text(grail(`${p} dependents ${file}`)));
+}, async ({ path: p, file }) => text(grail(`dependents --path ${p} --file ${file}`)));
 
 server.registerTool("grail_read", {
-  description: "Read the source code of a specific symbol (function, class, type, variable) from a file. Returns just that symbol's implementation with line numbers.",
+  description: "Read the source code of a specific symbol (function, class, type, variable) from a file. Returns just that symbol's implementation with line numbers. Use --line to find the enclosing symbol at a given line number.",
   inputSchema: {
     path: z.string().describe("Path to the project directory"),
     file: z.string().describe("Relative path to the file"),
-    symbol: z.string().describe("Name of the symbol to read"),
-    parent: z.string().optional().describe("Parent class/module name for methods"),
+    symbol: z.string().optional().describe("Name of the symbol to read"),
+    parent: z.string().optional().describe("Parent class/object name for methods"),
+    line: z.number().optional().describe("Line number to find enclosing symbol for"),
   },
-}, async ({ path: p, file, symbol, parent }) => text(grail(
-  parent ? `${p} read ${file} ${symbol} ${parent}` : `${p} read ${file} ${symbol}`
+}, async ({ path: p, file, symbol, parent, line }) => text(grail(
+  `read --path ${p} --file ${file}${flag("symbol", symbol)}${flag("parent", parent)}${flag("line", line)}`
 )));
 
 server.registerTool("grail_externals", {
@@ -79,7 +84,7 @@ server.registerTool("grail_externals", {
     depth: z.number().optional().describe("Optional: limit directory traversal depth"),
   },
 }, async ({ path: p, file, depth }) => text(grail(
-  file ? `${p} externals ${file}${depthFlag(depth)}` : `${p} externals${depthFlag(depth)}`
+  `externals --path ${p}${flag("file", file)}${flag("depth", depth)}`
 )));
 
 server.registerTool("grail_entry_points", {
@@ -88,7 +93,7 @@ server.registerTool("grail_entry_points", {
     path: z.string().describe("Path to the project directory"),
     depth: z.number().optional().describe("Optional: limit directory traversal depth"),
   },
-}, async ({ path: p, depth }) => text(grail(`${p} entry-points${depthFlag(depth)}`)));
+}, async ({ path: p, depth }) => text(grail(`entry-points --path ${p}${flag("depth", depth)}`)));
 
 server.registerTool("grail_cycles", {
   description: "Show circular dependency chains in the project. Use depth to limit traversal.",
@@ -96,7 +101,7 @@ server.registerTool("grail_cycles", {
     path: z.string().describe("Path to the project directory"),
     depth: z.number().optional().describe("Optional: limit directory traversal depth"),
   },
-}, async ({ path: p, depth }) => text(grail(`${p} cycles${depthFlag(depth)}`)));
+}, async ({ path: p, depth }) => text(grail(`cycles --path ${p}${flag("depth", depth)}`)));
 
 server.registerTool("grail_calls", {
   description: "Show what a function calls, with resolved signatures. Use --transitive for the full call chain. Use --depth to limit chain depth.",
@@ -104,13 +109,13 @@ server.registerTool("grail_calls", {
     path: z.string().describe("Path to the project directory"),
     file: z.string().describe("Relative path to the file"),
     symbol: z.string().describe("Name of the function/method"),
+    parent: z.string().optional().describe("Parent container name for object literal methods"),
     transitive: z.boolean().optional().describe("Follow calls transitively (full chain)"),
     depth: z.number().optional().describe("Limit transitive chain depth"),
   },
-}, async ({ path: p, file, symbol, transitive, depth }) => {
-  const flags = `${transitive ? " --transitive" : ""}${depth !== undefined ? ` --depth ${depth}` : ""}`;
-  return text(grail(`${p} calls ${file} ${symbol}${flags}`));
-});
+}, async ({ path: p, file, symbol, parent, transitive, depth }) => text(grail(
+  `calls --path ${p} --file ${file} --symbol ${symbol}${flag("parent", parent)}${boolFlag("transitive", transitive)}${flag("depth", depth)}`
+)));
 
 server.registerTool("grail_callers", {
   description: "Show what calls a given function. Use --transitive for the full impact chain (blast radius). Use --depth to limit chain depth.",
@@ -118,13 +123,13 @@ server.registerTool("grail_callers", {
     path: z.string().describe("Path to the project directory"),
     file: z.string().describe("Relative path to the file"),
     symbol: z.string().describe("Name of the function/method"),
+    parent: z.string().optional().describe("Parent container name for object literal methods"),
     transitive: z.boolean().optional().describe("Follow callers transitively (full impact chain)"),
     depth: z.number().optional().describe("Limit transitive chain depth"),
   },
-}, async ({ path: p, file, symbol, transitive, depth }) => {
-  const flags = `${transitive ? " --transitive" : ""}${depth !== undefined ? ` --depth ${depth}` : ""}`;
-  return text(grail(`${p} callers ${file} ${symbol}${flags}`));
-});
+}, async ({ path: p, file, symbol, parent, transitive, depth }) => text(grail(
+  `callers --path ${p} --file ${file} --symbol ${symbol}${flag("parent", parent)}${boolFlag("transitive", transitive)}${flag("depth", depth)}`
+)));
 
 async function main() {
   const transport = new StdioServerTransport();

@@ -8,14 +8,15 @@ registerLanguage(javascript);
 
 export const dependencies: Command = {
   name: "dependencies",
-  run: async (args) => {
-    if (!args[1]) fail("Missing file argument", "Usage: grail <path> dependencies <file>");
-    const { root } = await analyze(args[0]);
+  run: async (flags) => {
+    if (!flags.path) fail("Missing --path argument", "Usage: grail-ai dependencies --path <dir> --file <file>");
+    if (!flags.file) fail("Missing --file argument", "Usage: grail-ai dependencies --path <dir> --file <file>");
+    const { root } = await analyze(flags.path);
     const rel = (p: string) => path.relative(root.absolutePath, p);
     const allFiles = collectFiles(root);
-    const filePath = resolveFile(root.absolutePath, args[1]);
+    const filePath = resolveFile(root.absolutePath, flags.file);
     const file = findFile(allFiles, filePath);
-    if (!file) fail(`File not found: ${args[1]}`, "Check the file path is relative to the project root");
+    if (!file) fail(`File not found: ${flags.file}`, "Check the file path is relative to the project root");
 
     const result = file.node.imports.map((imp) => {
       const resolvedSymbols = imp.symbols.map((s) => {

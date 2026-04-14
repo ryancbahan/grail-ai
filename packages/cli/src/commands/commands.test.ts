@@ -90,7 +90,7 @@ import { tree } from "./tree";
 
 describe("tree command", () => {
   it("outputs root, language, and tree structure", async () => {
-    await tree.run([tmpDir], { depth: undefined, transitive: false, install: false });
+    await tree.run({ path: tmpDir, transitive: false });
     const result = getOutput();
     expect(result.root).toBe(tmpDir);
     expect(result.language).toBe("javascript");
@@ -98,7 +98,7 @@ describe("tree command", () => {
   });
 
   it("tree nodes have correct shapes", async () => {
-    await tree.run([tmpDir], { depth: undefined, transitive: false, install: false });
+    await tree.run({ path: tmpDir, transitive: false });
     const result = getOutput();
     const src = result.tree.children.find((c: any) => c.name === "src");
     expect(src.type).toBe("directory");
@@ -110,7 +110,7 @@ describe("tree command", () => {
   });
 
   it("respects depth flag", async () => {
-    await tree.run([tmpDir], { depth: 1, transitive: false, install: false });
+    await tree.run({ path: tmpDir, depth: 1, transitive: false });
     const result = getOutput();
     const src = result.tree.children.find((c: any) => c.name === "src");
     expect(src.type).toBe("directory");
@@ -124,7 +124,7 @@ import { summary } from "./summary";
 
 describe("summary command", () => {
   it("lists all files when no file arg given", async () => {
-    await summary.run([tmpDir], { depth: undefined, transitive: false, install: false });
+    await summary.run({ path: tmpDir, transitive: false });
     const result = getOutput();
     expect(Array.isArray(result)).toBe(true);
     const files = result.map((f: any) => f.file);
@@ -134,7 +134,7 @@ describe("summary command", () => {
   });
 
   it("each entry has symbols, dependencies, externals", async () => {
-    await summary.run([tmpDir], { depth: undefined, transitive: false, install: false });
+    await summary.run({ path: tmpDir, transitive: false });
     const result = getOutput();
     for (const entry of result) {
       expect(Array.isArray(entry.symbols)).toBe(true);
@@ -144,7 +144,7 @@ describe("summary command", () => {
   });
 
   it("single file summary shows symbols and imports", async () => {
-    await summary.run([tmpDir, "src/utils.ts"], { depth: undefined, transitive: false, install: false });
+    await summary.run({ path: tmpDir, file: "src/utils.ts", transitive: false });
     const result = getOutput();
     expect(result.file).toBe("src/utils.ts");
     expect(result.symbols.length).toBeGreaterThan(0);
@@ -154,13 +154,13 @@ describe("summary command", () => {
 
   it("fails for nonexistent file", async () => {
     await expect(
-      summary.run([tmpDir, "src/nope.ts"], { depth: undefined, transitive: false, install: false })
+      summary.run({ path: tmpDir, file: "src/nope.ts", transitive: false })
     ).rejects.toThrow("EXIT_1");
     expect(captured.some((c) => typeof c === "string" && c.includes("not found"))).toBe(true);
   });
 
   it("respects depth flag", async () => {
-    await summary.run([tmpDir], { depth: 1, transitive: false, install: false });
+    await summary.run({ path: tmpDir, depth: 1, transitive: false });
     const result = getOutput();
     const files = result.map((f: any) => f.file);
     expect(files.every((f: string) => !f.includes("/"))).toBe(true);
@@ -173,7 +173,7 @@ import { files } from "./files";
 
 describe("files command", () => {
   it("returns all file paths", async () => {
-    await files.run([tmpDir], { depth: undefined, transitive: false, install: false });
+    await files.run({ path: tmpDir, transitive: false });
     const result = getOutput();
     expect(result.files).toContain("src/index.ts");
     expect(result.files).toContain("src/utils.ts");
@@ -181,7 +181,7 @@ describe("files command", () => {
   });
 
   it("respects depth flag", async () => {
-    await files.run([tmpDir], { depth: 1, transitive: false, install: false });
+    await files.run({ path: tmpDir, depth: 1, transitive: false });
     const result = getOutput();
     expect(result.files.every((f: string) => !f.includes("/"))).toBe(true);
   });
@@ -193,7 +193,7 @@ import { dependencies } from "./dependencies";
 
 describe("dependencies command", () => {
   it("shows imports for a file", async () => {
-    await dependencies.run([tmpDir, "src/index.ts"], { depth: undefined, transitive: false, install: false });
+    await dependencies.run({ path: tmpDir, file: "src/index.ts", transitive: false });
     const result = getOutput();
     expect(result.file).toBe("src/index.ts");
     expect(result.dependencies.length).toBeGreaterThan(0);
@@ -205,7 +205,7 @@ describe("dependencies command", () => {
   });
 
   it("resolved symbols include kind and signature", async () => {
-    await dependencies.run([tmpDir, "src/index.ts"], { depth: undefined, transitive: false, install: false });
+    await dependencies.run({ path: tmpDir, file: "src/index.ts", transitive: false });
     const result = getOutput();
     const utilsDep = result.dependencies.find((d: any) => d.specifier === "./utils");
     const createUser = utilsDep.symbols.find((s: any) => s.name === "createUser");
@@ -215,20 +215,20 @@ describe("dependencies command", () => {
 
   it("fails when file arg is missing", async () => {
     await expect(
-      dependencies.run([tmpDir], { depth: undefined, transitive: false, install: false })
+      dependencies.run({ path: tmpDir, transitive: false })
     ).rejects.toThrow("EXIT_1");
     expect(captured.some((c) => typeof c === "string" && c.includes("Missing"))).toBe(true);
   });
 
   it("fails for nonexistent file", async () => {
     await expect(
-      dependencies.run([tmpDir, "src/nope.ts"], { depth: undefined, transitive: false, install: false })
+      dependencies.run({ path: tmpDir, file: "src/nope.ts", transitive: false })
     ).rejects.toThrow("EXIT_1");
     expect(captured.some((c) => typeof c === "string" && c.includes("not found"))).toBe(true);
   });
 
   it("file with no imports returns empty dependencies", async () => {
-    await dependencies.run([tmpDir, "src/types.ts"], { depth: undefined, transitive: false, install: false });
+    await dependencies.run({ path: tmpDir, file: "src/types.ts", transitive: false });
     const result = getOutput();
     expect(result.dependencies).toEqual([]);
   });
@@ -240,7 +240,7 @@ import { dependents } from "./dependents";
 
 describe("dependents command", () => {
   it("shows consumers of a file", async () => {
-    await dependents.run([tmpDir, "src/utils.ts"], { depth: undefined, transitive: false, install: false });
+    await dependents.run({ path: tmpDir, file: "src/utils.ts", transitive: false });
     const result = getOutput();
     expect(result.file).toBe("src/utils.ts");
     expect(result.dependents.length).toBeGreaterThan(0);
@@ -251,7 +251,7 @@ describe("dependents command", () => {
   });
 
   it("consumed symbols have SymbolRef shape", async () => {
-    await dependents.run([tmpDir, "src/utils.ts"], { depth: undefined, transitive: false, install: false });
+    await dependents.run({ path: tmpDir, file: "src/utils.ts", transitive: false });
     const result = getOutput();
     const indexDep = result.dependents.find((d: any) => d.file === "src/index.ts");
     for (const sym of indexDep.symbols) {
@@ -264,13 +264,13 @@ describe("dependents command", () => {
 
   it("fails when file arg is missing", async () => {
     await expect(
-      dependents.run([tmpDir], { depth: undefined, transitive: false, install: false })
+      dependents.run({ path: tmpDir, transitive: false })
     ).rejects.toThrow("EXIT_1");
     expect(captured.some((c) => typeof c === "string" && c.includes("Missing"))).toBe(true);
   });
 
   it("file with no dependents returns empty array", async () => {
-    await dependents.run([tmpDir, "src/index.ts"], { depth: undefined, transitive: false, install: false });
+    await dependents.run({ path: tmpDir, file: "src/index.ts", transitive: false });
     const result = getOutput();
     expect(result.dependents).toEqual([]);
   });
@@ -282,13 +282,13 @@ import { externals } from "./externals";
 
 describe("externals command", () => {
   it("returns project-wide externals", async () => {
-    await externals.run([tmpDir], { depth: undefined, transitive: false, install: false });
+    await externals.run({ path: tmpDir, transitive: false });
     const result = getOutput();
     expect(Array.isArray(result.externals)).toBe(true);
   });
 
   it("returns per-file externals when file arg given", async () => {
-    await externals.run([tmpDir, "src/index.ts"], { depth: undefined, transitive: false, install: false });
+    await externals.run({ path: tmpDir, file: "src/index.ts", transitive: false });
     const result = getOutput();
     expect(result.file).toBe("src/index.ts");
     expect(Array.isArray(result.externals)).toBe(true);
@@ -296,7 +296,7 @@ describe("externals command", () => {
 
   it("fails for nonexistent file", async () => {
     await expect(
-      externals.run([tmpDir, "src/nope.ts"], { depth: undefined, transitive: false, install: false })
+      externals.run({ path: tmpDir, file: "src/nope.ts", transitive: false })
     ).rejects.toThrow("EXIT_1");
     expect(captured.some((c) => typeof c === "string" && c.includes("not found"))).toBe(true);
   });
@@ -308,7 +308,7 @@ import { entryPoints } from "./entry-points";
 
 describe("entry-points command", () => {
   it("identifies entry point files", async () => {
-    await entryPoints.run([tmpDir], { depth: undefined, transitive: false, install: false });
+    await entryPoints.run({ path: tmpDir, transitive: false });
     const result = getOutput();
     expect(Array.isArray(result.entryPoints)).toBe(true);
     expect(result.entryPoints).toContain("src/index.ts");
@@ -322,7 +322,7 @@ import { cycles } from "./cycles";
 
 describe("cycles command", () => {
   it("returns empty for acyclic project", async () => {
-    await cycles.run([tmpDir], { depth: undefined, transitive: false, install: false });
+    await cycles.run({ path: tmpDir, transitive: false });
     const result = getOutput();
     expect(result.cycles).toEqual([]);
   });
@@ -334,7 +334,7 @@ import { jsonCmd } from "./json";
 
 describe("json command", () => {
   it("returns full AST root node", async () => {
-    await jsonCmd.run([tmpDir], { depth: undefined, transitive: false, install: false });
+    await jsonCmd.run({ path: tmpDir, transitive: false });
     const result = getOutput();
     expect(result.type).toBe("root");
     expect(result.absolutePath).toBe(tmpDir);
@@ -349,7 +349,7 @@ import { calls } from "./calls";
 
 describe("calls command", () => {
   it("shows outward calls for a function", async () => {
-    await calls.run([tmpDir, "src/index.ts", "main"], { depth: undefined, transitive: false, install: false });
+    await calls.run({ path: tmpDir, file: "src/index.ts", symbol: "main", transitive: false });
     const result = getOutput();
     expect(result.file).toBe("src/index.ts");
     expect(result.name).toBe("main");
@@ -359,7 +359,7 @@ describe("calls command", () => {
   });
 
   it("call results include SymbolRef fields", async () => {
-    await calls.run([tmpDir, "src/index.ts", "main"], { depth: undefined, transitive: false, install: false });
+    await calls.run({ path: tmpDir, file: "src/index.ts", symbol: "main", transitive: false });
     const result = getOutput();
     const cu = result.calls.find((c: any) => c.name === "createUser");
     expect(cu.file).toBe("src/utils.ts");
@@ -370,7 +370,7 @@ describe("calls command", () => {
   });
 
   it("transitive follows the full chain", async () => {
-    await calls.run([tmpDir, "src/index.ts", "main"], { depth: undefined, transitive: true, install: false });
+    await calls.run({ path: tmpDir, file: "src/index.ts", symbol: "main", transitive: true });
     const result = getOutput();
     const names = result.calls.map((c: any) => c.name);
     expect(names).toContain("createUser");
@@ -378,7 +378,7 @@ describe("calls command", () => {
   });
 
   it("transitive with depth 1 limits to direct calls", async () => {
-    await calls.run([tmpDir, "src/index.ts", "main"], { depth: 1, transitive: true, install: false });
+    await calls.run({ path: tmpDir, file: "src/index.ts", symbol: "main", depth: 1, transitive: true });
     const result = getOutput();
     const names = result.calls.map((c: any) => c.name);
     expect(names).toContain("createUser");
@@ -387,7 +387,7 @@ describe("calls command", () => {
 
   it("fails when file or symbol arg is missing", async () => {
     await expect(
-      calls.run([tmpDir], { depth: undefined, transitive: false, install: false })
+      calls.run({ path: tmpDir, transitive: false })
     ).rejects.toThrow("EXIT_1");
     expect(captured.some((c) => typeof c === "string" && c.includes("Missing"))).toBe(true);
   });
@@ -399,7 +399,7 @@ import { callers } from "./callers";
 
 describe("callers command", () => {
   it("shows inward callers for a function", async () => {
-    await callers.run([tmpDir, "src/utils.ts", "createUser"], { depth: undefined, transitive: false, install: false });
+    await callers.run({ path: tmpDir, file: "src/utils.ts", symbol: "createUser", transitive: false });
     const result = getOutput();
     expect(result.file).toBe("src/utils.ts");
     expect(result.name).toBe("createUser");
@@ -411,7 +411,7 @@ describe("callers command", () => {
   });
 
   it("caller results include SymbolRef fields", async () => {
-    await callers.run([tmpDir, "src/utils.ts", "createUser"], { depth: undefined, transitive: false, install: false });
+    await callers.run({ path: tmpDir, file: "src/utils.ts", symbol: "createUser", transitive: false });
     const result = getOutput();
     const mainCaller = result.callers.find((c: any) => c.name === "main");
     expect(mainCaller.kind).toBe("function");
@@ -421,7 +421,7 @@ describe("callers command", () => {
   });
 
   it("transitive follows the full caller chain", async () => {
-    await callers.run([tmpDir, "src/utils.ts", "validateEmail"], { depth: undefined, transitive: true, install: false });
+    await callers.run({ path: tmpDir, file: "src/utils.ts", symbol: "validateEmail", transitive: true });
     const result = getOutput();
     const names = result.callers.map((c: any) => c.name);
     expect(names).toContain("createUser");
@@ -429,7 +429,7 @@ describe("callers command", () => {
   });
 
   it("transitive with depth 1 limits to direct callers", async () => {
-    await callers.run([tmpDir, "src/utils.ts", "validateEmail"], { depth: 1, transitive: true, install: false });
+    await callers.run({ path: tmpDir, file: "src/utils.ts", symbol: "validateEmail", depth: 1, transitive: true });
     const result = getOutput();
     expect(result.callers).toHaveLength(1);
     expect(result.callers[0].name).toBe("createUser");
@@ -437,13 +437,13 @@ describe("callers command", () => {
 
   it("fails when file or symbol arg is missing", async () => {
     await expect(
-      callers.run([tmpDir], { depth: undefined, transitive: false, install: false })
+      callers.run({ path: tmpDir, transitive: false })
     ).rejects.toThrow("EXIT_1");
     expect(captured.some((c) => typeof c === "string" && c.includes("Missing"))).toBe(true);
   });
 
   it("function with no callers returns empty array", async () => {
-    await callers.run([tmpDir, "src/index.ts", "main"], { depth: undefined, transitive: false, install: false });
+    await callers.run({ path: tmpDir, file: "src/index.ts", symbol: "main", transitive: false });
     const result = getOutput();
     expect(result.callers).toEqual([]);
   });
@@ -455,7 +455,7 @@ import { read } from "./read";
 
 describe("read command", () => {
   it("reads function source with full shape", async () => {
-    await read.run([tmpDir, "src/utils.ts", "createUser"], { depth: undefined, transitive: false, install: false });
+    await read.run({ path: tmpDir, file: "src/utils.ts", symbol: "createUser", transitive: false });
     const result = getOutput();
     expect(result.file).toBe("src/utils.ts");
     expect(result.name).toBe("createUser");
@@ -467,7 +467,7 @@ describe("read command", () => {
   });
 
   it("reads internal function", async () => {
-    await read.run([tmpDir, "src/utils.ts", "validateEmail"], { depth: undefined, transitive: false, install: false });
+    await read.run({ path: tmpDir, file: "src/utils.ts", symbol: "validateEmail", transitive: false });
     const result = getOutput();
     expect(result.name).toBe("validateEmail");
     expect(result.kind).toBe("function");
@@ -475,7 +475,7 @@ describe("read command", () => {
   });
 
   it("reads interface", async () => {
-    await read.run([tmpDir, "src/types.ts", "User"], { depth: undefined, transitive: false, install: false });
+    await read.run({ path: tmpDir, file: "src/types.ts", symbol: "User", transitive: false });
     const result = getOutput();
     expect(result.name).toBe("User");
     expect(result.kind).toBe("interface");
@@ -483,7 +483,7 @@ describe("read command", () => {
   });
 
   it("reads type alias", async () => {
-    await read.run([tmpDir, "src/types.ts", "UserRole"], { depth: undefined, transitive: false, install: false });
+    await read.run({ path: tmpDir, file: "src/types.ts", symbol: "UserRole", transitive: false });
     const result = getOutput();
     expect(result.name).toBe("UserRole");
     expect(result.kind).toBe("type");
@@ -492,21 +492,21 @@ describe("read command", () => {
 
   it("fails when file arg is missing", async () => {
     await expect(
-      read.run([tmpDir], { depth: undefined, transitive: false, install: false })
+      read.run({ path: tmpDir, transitive: false })
     ).rejects.toThrow("EXIT_1");
     expect(captured.some((c) => typeof c === "string" && c.includes("Missing"))).toBe(true);
   });
 
   it("fails when symbol arg is missing", async () => {
     await expect(
-      read.run([tmpDir, "src/utils.ts"], { depth: undefined, transitive: false, install: false })
+      read.run({ path: tmpDir, file: "src/utils.ts", transitive: false })
     ).rejects.toThrow("EXIT_1");
     expect(captured.some((c) => typeof c === "string" && c.includes("Missing"))).toBe(true);
   });
 
   it("fails for nonexistent symbol", async () => {
     await expect(
-      read.run([tmpDir, "src/utils.ts", "nope"], { depth: undefined, transitive: false, install: false })
+      read.run({ path: tmpDir, file: "src/utils.ts", symbol: "nope", transitive: false })
     ).rejects.toThrow("EXIT_1");
     expect(captured.some((c) => typeof c === "string" && c.includes("not found"))).toBe(true);
   });
@@ -519,7 +519,7 @@ import { help } from "./help";
 describe("help command", () => {
   it("outputs usage text and exits", async () => {
     await expect(
-      help.run([], { depth: undefined, transitive: false, install: false })
+      help.run({ transitive: false })
     ).rejects.toThrow("EXIT_0");
     expect(exitCode).toBe(0);
     expect(captured.some((c) => typeof c === "string" && c.includes("grail - codebase analyzer"))).toBe(true);

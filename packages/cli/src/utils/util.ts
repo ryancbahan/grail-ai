@@ -26,35 +26,30 @@ export function lookupSymbol(files: FileEntry[], resolvedPath: string, symbolNam
   return file.node.symbols.find((s) => s.name === symbolName);
 }
 
-export function parseArgs(argv: string[]): { commandName: string; args: string[]; flags: Flags } {
+export function parseArgs(argv: string[]): { commandName: string; flags: Flags } {
+  let p: string | undefined;
+  let file: string | undefined;
+  let symbol: string | undefined;
+  let parent: string | undefined;
+  let line: number | undefined;
   let depth: number | undefined;
   let transitive = false;
   let install = false;
-  const filtered: string[] = [];
+  const positional: string[] = [];
 
   for (let i = 0; i < argv.length; i++) {
-    if (argv[i] === "--depth" && argv[i + 1]) {
-      depth = parseInt(argv[i + 1], 10);
-      i++;
-    } else if (argv[i] === "--transitive") {
-      transitive = true;
-    } else if (argv[i] === "--install") {
-      install = true;
-    } else {
-      filtered.push(argv[i]);
-    }
+    if (argv[i] === "--path" && argv[i + 1]) { p = argv[++i]; }
+    else if (argv[i] === "--file" && argv[i + 1]) { file = argv[++i]; }
+    else if (argv[i] === "--symbol" && argv[i + 1]) { symbol = argv[++i]; }
+    else if (argv[i] === "--parent" && argv[i + 1]) { parent = argv[++i]; }
+    else if (argv[i] === "--line" && argv[i + 1]) { line = parseInt(argv[++i], 10); }
+    else if (argv[i] === "--depth" && argv[i + 1]) { depth = parseInt(argv[++i], 10); }
+    else if (argv[i] === "--transitive") { transitive = true; }
+    else if (argv[i] === "--install") { install = true; }
+    else { positional.push(argv[i]); }
   }
 
-  let commandName: string;
-  let args: string[];
+  const commandName = positional[0] || "help";
 
-  if (filtered[0] === "skill") {
-    commandName = "skill";
-    args = filtered.slice(1);
-  } else {
-    commandName = filtered[1] || "tree";
-    args = [filtered[0], ...filtered.slice(2)];
-  }
-
-  return { commandName, args, flags: { depth, transitive, install } };
+  return { commandName, flags: { path: p, file, symbol, parent, line, depth, transitive, install } };
 }

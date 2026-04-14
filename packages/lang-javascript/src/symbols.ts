@@ -40,7 +40,7 @@ function visitSymbols(
 
     const value = node.childForFieldName("value");
     if (value) {
-      add({ name: "default", kind: "default", signature: "default", visibility: "public" });
+      add({ name: "default", kind: "default", signature: "default", visibility: "public", ...lineRange(value) });
       return;
     }
 
@@ -57,6 +57,7 @@ function visitSymbols(
             kind: "unknown",
             signature: exportedName,
             visibility: "public",
+            ...lineRange(specifier),
           });
         }
       }
@@ -79,6 +80,10 @@ function visitSymbols(
     const child = node.child(i);
     if (child) visitSymbols(child, add);
   }
+}
+
+function lineRange(node: Node): { line: number; endLine: number } {
+  return { line: node.startPosition.row + 1, endLine: node.endPosition.row + 1 };
 }
 
 function extractSignature(node: Node, bodyType: string): string {
@@ -105,9 +110,9 @@ function handleDeclaration(
       const name = declaration.childForFieldName("name");
       const sig = extractSignature(declaration, "statement_block");
       if (name) {
-        add({ name: name.text, kind: "function", signature: sig, visibility });
+        add({ name: name.text, kind: "function", signature: sig, visibility, ...lineRange(declaration) });
       } else {
-        add({ name: "default", kind: "default", signature: sig, visibility });
+        add({ name: "default", kind: "default", signature: sig, visibility, ...lineRange(declaration) });
       }
       break;
     }
@@ -117,7 +122,7 @@ function handleDeclaration(
       const className = name?.text ?? "default";
       const sig = extractSignature(declaration, "class_body");
       const kind: SymbolKind = name ? "class" : "default";
-      add({ name: className, kind, signature: sig, visibility });
+      add({ name: className, kind, signature: sig, visibility, ...lineRange(declaration) });
 
       // Extract class members
       const body = declaration.childForFieldName("body");
@@ -138,7 +143,7 @@ function handleDeclaration(
           const sig = eqIndex > 0
             ? child.text.slice(0, eqIndex).trim()
             : child.text;
-          add({ name: varName, kind: "variable", signature: sig, visibility });
+          add({ name: varName, kind: "variable", signature: sig, visibility, ...lineRange(declaration) });
 
           // Emit child symbols for function properties in object literals
           const value = child.childForFieldName("value");
@@ -153,7 +158,7 @@ function handleDeclaration(
     case "type_alias_declaration": {
       const name = declaration.childForFieldName("name");
       if (name) {
-        add({ name: name.text, kind: "type", signature: declaration.text.replace(/;$/, "").trim(), visibility });
+        add({ name: name.text, kind: "type", signature: declaration.text.replace(/;$/, "").trim(), visibility, ...lineRange(declaration) });
       }
       break;
     }
@@ -161,7 +166,7 @@ function handleDeclaration(
     case "interface_declaration": {
       const name = declaration.childForFieldName("name");
       if (name) {
-        add({ name: name.text, kind: "interface", signature: declaration.text.replace(/;$/, "").trim(), visibility });
+        add({ name: name.text, kind: "interface", signature: declaration.text.replace(/;$/, "").trim(), visibility, ...lineRange(declaration) });
       }
       break;
     }
@@ -169,7 +174,7 @@ function handleDeclaration(
     case "enum_declaration": {
       const name = declaration.childForFieldName("name");
       if (name) {
-        add({ name: name.text, kind: "enum", signature: declaration.text.replace(/;$/, "").trim(), visibility });
+        add({ name: name.text, kind: "enum", signature: declaration.text.replace(/;$/, "").trim(), visibility, ...lineRange(declaration) });
       }
       break;
     }
@@ -200,6 +205,7 @@ function extractClassMembers(
         signature: sig,
         visibility,
         parent: className,
+        ...lineRange(member),
       });
     } else if (
       member.type === "public_field_definition" ||
@@ -215,6 +221,7 @@ function extractClassMembers(
         signature: member.text.replace(/;$/, "").trim(),
         visibility,
         parent: className,
+        ...lineRange(member),
       });
     }
   }
@@ -232,7 +239,7 @@ function extractObjectMethods(
       const name = prop.childForFieldName("name");
       if (!name) continue;
       const sig = extractSignature(prop, "statement_block");
-      add({ name: name.text, kind: "method", signature: sig, visibility, parent: parentName });
+      add({ name: name.text, kind: "method", signature: sig, visibility, parent: parentName, ...lineRange(prop) });
       continue;
     }
 
@@ -247,7 +254,7 @@ function extractObjectMethods(
         || value.type === "function";
       if (isFn) {
         const sig = extractSignature(value, "statement_block");
-        add({ name: key.text, kind: "method", signature: sig, visibility, parent: parentName });
+        add({ name: key.text, kind: "method", signature: sig, visibility, parent: parentName, ...lineRange(value) });
       }
     }
   }

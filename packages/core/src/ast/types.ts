@@ -48,6 +48,8 @@ export interface Symbol {
   signature: string;
   visibility: SymbolVisibility;
   parent?: string;
+  line?: number;
+  endLine?: number;
   calls?: SymbolRef[];
 }
 

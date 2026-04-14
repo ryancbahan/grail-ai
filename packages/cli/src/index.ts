@@ -27,16 +27,16 @@ async function main() {
   const argv = process.argv.slice(2);
 
   if (argv.includes("--help") || argv.includes("-h") || argv.length === 0) {
-    await help.run([], { depth: undefined, transitive: false, install: false });
+    await help.run({ transitive: false });
     return;
   }
 
-  const { commandName, args, flags } = parseArgs(argv);
+  const { commandName, flags } = parseArgs(argv);
 
   const command = commands.find((c) => c.name === commandName);
   if (!command) fail(`Unknown command: ${commandName}`, "Run with --help to see available commands");
 
-  await command.run(args, flags);
+  await command.run(flags);
 }
 
 main().catch((err: unknown) => {

@@ -5,7 +5,7 @@ import { fail, output } from "../utils/util";
 
 export const skill: Command = {
   name: "skill",
-  run: async (args, flags) => {
+  run: async (flags) => {
     const skillSource = path.resolve(__dirname, "../../../skill/SKILL.md");
     let skillContent: string;
     try {
@@ -24,13 +24,11 @@ export const skill: Command = {
       return;
     }
 
-    const installArg = args[0] && !args[0].startsWith("--") ? args[0] : null;
-
-    const targetDir = installArg
-      ? path.resolve(path.dirname(installArg))
+    const targetDir = flags.path
+      ? path.resolve(path.dirname(flags.path))
       : path.resolve(process.cwd(), ".claude", "skills", "grail");
-    const targetFile = installArg
-      ? path.resolve(installArg)
+    const targetFile = flags.path
+      ? path.resolve(flags.path)
       : path.join(targetDir, "SKILL.md");
 
     fs.mkdirSync(targetDir, { recursive: true });

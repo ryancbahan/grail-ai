@@ -1,4 +1,9 @@
 export interface Flags {
+  path?: string;
+  file?: string;
+  symbol?: string;
+  parent?: string;
+  line?: number;
   depth?: number;
   transitive: boolean;
   install?: boolean;
@@ -6,5 +11,5 @@ export interface Flags {
 
 export interface Command {
   name: string;
-  run: (args: string[], flags: Flags) => Promise<void>;
+  run: (flags: Flags) => Promise<void>;
 }
