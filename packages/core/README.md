@@ -1,149 +1,75 @@
-# grail-ai
+# @grail-ai/core
 
-Runtime codebase AST with dependency graphs, symbol extraction, and function signatures. Built for LLM progressive disclosure — start broad, narrow to relevant, read only what you need.
-
-```
-summary        → what does every file expose?
-dependencies   → what does this file depend on? (with resolved signatures)
-dependents     → what breaks if I change this? (with consumed symbols)
-calls          → what does this function call? (with resolved signatures)
-callers        → what calls this function? (function-level blast radius)
-read           → show me just this one function's implementation
-```
+Core analysis engine for grail — builds file trees, dependency graphs, call graphs, and symbol tables from source code. Language-agnostic; language support is provided by plugins like `@grail-ai/lang-javascript`.
 
 ## Install
 
 ```bash
-npx grail-ai summary --path .          # no install needed
+npm install @grail-ai/core
 ```
 
-Or clone and develop:
-
-```bash
-git clone https://github.com/ryancbahan/grail-ai.git
-cd grail-ai
-npm install
-npm run build
-npx grail-ai summary --path .
-```
-
-## Commands
-
-All commands use named flags. `--path` is required for all analysis commands.
-
-```bash
-npx grail-ai tree --path <dir>                                  # file tree
-npx grail-ai summary --path <dir> [--file <file>]               # symbols + deps per file
-npx grail-ai dependencies --path <dir> --file <file>             # imports with resolved signatures
-npx grail-ai dependents --path <dir> --file <file>               # consumers with consumed symbols
-npx grail-ai calls --path <dir> --file <file> --symbol <sym>     # what does this function call
-npx grail-ai callers --path <dir> --file <file> --symbol <sym>   # what calls this function
-npx grail-ai read --path <dir> --file <file> --symbol <sym>      # one symbol's source code
-npx grail-ai read --path <dir> --file <file> --line <n>          # find enclosing symbol at line
-npx grail-ai externals --path <dir> [--file <file>]              # external packages
-npx grail-ai entry-points --path <dir>                           # files nothing imports
-npx grail-ai cycles --path <dir>                                 # circular dependencies
-npx grail-ai files --path <dir>                                  # all file paths
-npx grail-ai json --path <dir>                                   # full AST as JSON
-```
-
-### Flags
-
-| Flag | Description |
-|------|-------------|
-| `--path <dir>` | Project directory (required) |
-| `--file <file>` | Target file (relative to project root) |
-| `--symbol <name>` | Target symbol name |
-| `--parent <name>` | Parent container (class/object) for methods |
-| `--line <n>` | Line number (for `read`: find enclosing symbol) |
-| `--depth <n>` | Limit traversal depth |
-| `--transitive` | Follow calls/callers transitively |
-
-### Object literal methods
-
-The call graph resolves functions inside object literals (command patterns, config objects, route handlers):
+## Usage
 
 ```ts
-export const cmd: Command = {
-  run: async () => { /* calls are tracked here */ },
-};
+import { registerLanguage, loadLanguage, analyze, collectFiles } from "@grail-ai/core";
+import { javascript } from "@grail-ai/lang-javascript";
+
+registerLanguage(javascript);
+
+const { root, language } = await analyze("./my-project");
+const files = collectFiles(root);
+
+// root.tree — file/directory AST with symbols and imports
+// files — flat list of { filePath, node } entries
 ```
 
-These are represented as child symbols with a `parent` field. Query them with `--parent`:
+## API
 
-```bash
-npx grail-ai calls --path . --file src/cmd.ts --symbol run --parent cmd
-```
+### Analysis
 
-### Read by line number
+- `analyze(dirPath, options?)` — Parse a project directory, detect language, build dependency graph
+- `collectFiles(root)` — Flatten the tree into a list of file entries
 
-When you have a line number (e.g., from grep), use `--line` instead of `--symbol` to find and read the enclosing symbol:
+### Queries
 
-```bash
-npx grail-ai read --path . --file src/cmd.ts --line 18
-```
+- `dependenciesOf(files, filePath)` — What does this file import?
+- `dependentsOf(files, filePath)` — What imports this file?
+- `allExternals(root)` — All external packages used
+- `findEntryPoints(files)` — Files nothing imports
+- `findCircularDependencies(files)` — Circular dependency chains
 
-## MCP Server
+### Call graph
 
-Grail ships an MCP server for AI agent integration. Each CLI command has a matching MCP tool.
+- `buildCallGraph(files, rootPath, language)` — Populate `symbol.calls` on all files
+- `callsOf(files, rootPath, filePath, symbol, options?)` — What does this function call?
+- `callersOf(files, rootPath, filePath, symbol, options?)` — What calls this function?
 
-Add to your MCP config:
+### Reader
 
-```json
-{
-  "mcpServers": {
-    "grail": {
-      "command": "node",
-      "args": ["/path/to/grail-ai/packages/mcp/dist/index.js"]
-    }
-  }
-}
-```
+- `readSymbol(files, rootPath, language, filePath, symbol, parent?)` — Read a symbol's source code
 
-Tools: `grail_summary`, `grail_dependencies`, `grail_dependents`, `grail_calls`, `grail_callers`, `grail_read`, `grail_externals`, `grail_entry_points`, `grail_cycles`.
+## Adding a language
 
-## Claude Code Skill
-
-Install the skill for Claude Code:
-
-```bash
-npx grail-ai skill --install
-```
-
-Or copy `packages/skill/SKILL.md` to `~/.claude/skills/grail/SKILL.md`.
-
-## Monorepo
-
-```
-packages/
-├── core/              @grail-ai/core              — AST engine, types, queries, grammar loader
-├── lang-javascript/   @grail-ai/lang-javascript   — JS/TS via tree-sitter
-├── cli/               grail-ai                    — CLI
-├── mcp/               @grail-ai/mcp               — MCP server
-├── web/               @grail-ai/web               — Preact + D3 visualization
-└── skill/                                         — Claude Code skill
-```
-
-## Adding a Language
-
-Create a package that exports a `LanguageDescriptor` and registers it:
+Implement the `LanguageImplementation` interface and register a `LanguageDescriptor`:
 
 ```ts
 import { registerLanguage } from "@grail-ai/core";
-import { python } from "@grail-ai/lang-python";
 
-registerLanguage(python);
+registerLanguage({
+  name: "python",
+  extensions: [".py"],
+  markers: ["requirements.txt", "setup.py", "pyproject.toml"],
+  grammars: [{ extensions: [".py"], package: "tree-sitter-python", wasmFile: "tree-sitter-python.wasm" }],
+  implementation: { parseImports, parseSymbols, resolveImport, locateSymbol },
+});
 ```
 
-See [LanguageDescriptor interface](packages/core/src/languages/types.ts) for the full contract.
+See [`LanguageImplementation`](https://github.com/ryancbahan/grail-ai/blob/main/packages/core/src/languages/types.ts) for the full contract.
 
-## Tests
+## Related packages
 
-```bash
-npm test                        # all packages
-npm test -w packages/core       # single package
-```
+- [`grail-ai`](https://www.npmjs.com/package/grail-ai) — CLI
+- [`@grail-ai/lang-javascript`](https://www.npmjs.com/package/@grail-ai/lang-javascript) — JS/TS language support
+- [`@grail-ai/mcp`](https://www.npmjs.com/package/@grail-ai/mcp) — MCP server
 
-## Releasing
-
-See [docs/releasing.md](docs/releasing.md).
+GitHub: [ryancbahan/grail-ai](https://github.com/ryancbahan/grail-ai)
