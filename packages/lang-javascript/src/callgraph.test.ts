@@ -228,6 +228,87 @@ describe("buildJavaScriptCallGraph", () => {
     });
   });
 
+  describe("object literal methods", () => {
+    it("resolves calls from arrow functions inside object literals", async () => {
+      writeFile("package.json", "{}");
+      writeFile("utils.ts", "export function helper() { return 1; }\n");
+      writeFile("cmd.ts", `
+        import { helper } from "./utils";
+        export const cmd = {
+          run: async () => { return helper(); },
+        };
+      `);
+
+      const root = await analyzeAndBuildCallGraph();
+      const runSym = findSymbol(root, "cmd.ts", "run");
+
+      expect(runSym).toBeDefined();
+      expect(runSym!.parent).toBe("cmd");
+      expect(runSym!.calls).toBeDefined();
+      expect(runSym!.calls!.some((c) => c.name === "helper")).toBe(true);
+    });
+
+    it("resolves calls from method shorthand in object literals", async () => {
+      writeFile("package.json", "{}");
+      writeFile("utils.ts", "export function helper() { return 1; }\n");
+      writeFile("cmd.ts", `
+        import { helper } from "./utils";
+        export const cmd = {
+          run() { return helper(); },
+        };
+      `);
+
+      const root = await analyzeAndBuildCallGraph();
+      const runSym = findSymbol(root, "cmd.ts", "run");
+
+      expect(runSym).toBeDefined();
+      expect(runSym!.parent).toBe("cmd");
+      expect(runSym!.calls).toBeDefined();
+      expect(runSym!.calls!.some((c) => c.name === "helper")).toBe(true);
+    });
+
+    it("handles multiple function properties independently", async () => {
+      writeFile("package.json", "{}");
+      writeFile("a.ts", "export function fnA() { return 1; }\n");
+      writeFile("b.ts", "export function fnB() { return 2; }\n");
+      writeFile("cmd.ts", `
+        import { fnA } from "./a";
+        import { fnB } from "./b";
+        export const cmd = {
+          first: () => fnA(),
+          second: () => fnB(),
+        };
+      `);
+
+      const root = await analyzeAndBuildCallGraph();
+      const firstSym = findSymbol(root, "cmd.ts", "first");
+      const secondSym = findSymbol(root, "cmd.ts", "second");
+
+      expect(firstSym!.calls!.some((c) => c.name === "fnA")).toBe(true);
+      expect(firstSym!.calls!.every((c) => c.name !== "fnB")).toBe(true);
+      expect(secondSym!.calls!.some((c) => c.name === "fnB")).toBe(true);
+      expect(secondSym!.calls!.every((c) => c.name !== "fnA")).toBe(true);
+    });
+
+    it("does not emit non-function properties as symbols", async () => {
+      writeFile("package.json", "{}");
+      writeFile("cmd.ts", `
+        export const cmd = {
+          name: "test",
+          run: () => {},
+        };
+      `);
+
+      const root = await analyzeAndBuildCallGraph();
+      const nameSym = findSymbol(root, "cmd.ts", "name");
+      const runSym = findSymbol(root, "cmd.ts", "run");
+
+      expect(nameSym).toBeUndefined();
+      expect(runSym).toBeDefined();
+      expect(runSym!.parent).toBe("cmd");
+    });
+  });
+
   describe("plain JavaScript", () => {
     it("resolves calls in .js files", async () => {
       writeFile("package.json", "{}");

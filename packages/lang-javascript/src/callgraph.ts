@@ -44,11 +44,25 @@ function getAllFunctions(sourceFile: SourceFile): FunctionLike[] {
     funcs.push(...cls.getMethods());
   }
 
-  // Arrow functions and function expressions assigned to variables
+  // Arrow functions and function expressions assigned to variables,
+  // plus function properties inside object literals
   for (const varDecl of sourceFile.getVariableDeclarations()) {
     const init = varDecl.getInitializer();
-    if (init && (Node.isArrowFunction(init) || Node.isFunctionExpression(init))) {
+    if (!init) continue;
+
+    if (Node.isArrowFunction(init) || Node.isFunctionExpression(init)) {
       funcs.push(init);
+    } else if (Node.isObjectLiteralExpression(init)) {
+      for (const prop of init.getProperties()) {
+        if (Node.isMethodDeclaration(prop)) {
+          funcs.push(prop);
+        } else if (Node.isPropertyAssignment(prop)) {
+          const propInit = prop.getInitializer();
+          if (propInit && (Node.isArrowFunction(propInit) || Node.isFunctionExpression(propInit))) {
+            funcs.push(propInit);
+          }
+        }
+      }
     }
   }
 
@@ -57,8 +71,21 @@ function getAllFunctions(sourceFile: SourceFile): FunctionLike[] {
     for (const decl of exportDecl) {
       if (Node.isVariableDeclaration(decl)) {
         const init = decl.getInitializer();
-        if (init && (Node.isArrowFunction(init) || Node.isFunctionExpression(init))) {
+        if (!init) continue;
+
+        if (Node.isArrowFunction(init) || Node.isFunctionExpression(init)) {
           if (!funcs.includes(init)) funcs.push(init);
+        } else if (Node.isObjectLiteralExpression(init)) {
+          for (const prop of init.getProperties()) {
+            if (Node.isMethodDeclaration(prop)) {
+              if (!funcs.includes(prop)) funcs.push(prop);
+            } else if (Node.isPropertyAssignment(prop)) {
+              const propInit = prop.getInitializer();
+              if (propInit && (Node.isArrowFunction(propInit) || Node.isFunctionExpression(propInit))) {
+                if (!funcs.includes(propInit)) funcs.push(propInit);
+              }
+            }
+          }
         }
       }
     }
@@ -68,24 +95,51 @@ function getAllFunctions(sourceFile: SourceFile): FunctionLike[] {
 }
 
 function getFunctionName(func: FunctionLike): string | null {
-  if (Node.isFunctionDeclaration(func) || Node.isMethodDeclaration(func)) {
+  if (Node.isFunctionDeclaration(func)) {
     return func.getName() ?? null;
   }
-  // Arrow function / function expression — get name from variable declaration
+  if (Node.isMethodDeclaration(func)) {
+    return func.getName() ?? null;
+  }
+  // Arrow function / function expression — get name from variable or property
   const parent = func.getParent();
   if (parent && Node.isVariableDeclaration(parent)) {
+    return parent.getName();
+  }
+  if (parent && Node.isPropertyAssignment(parent)) {
     return parent.getName();
   }
   return null;
 }
 
-function getClassName(func: FunctionLike): string | undefined {
+function getContainerName(func: FunctionLike): string | undefined {
+  // Class method → class name
   if (Node.isMethodDeclaration(func)) {
-    const cls = func.getParent();
-    if (cls && Node.isClassDeclaration(cls)) {
-      return cls.getName();
+    const parent = func.getParent();
+    if (parent && Node.isClassDeclaration(parent)) {
+      return parent.getName();
+    }
+    // Method shorthand inside object literal assigned to a variable
+    if (parent && Node.isObjectLiteralExpression(parent)) {
+      const varDecl = parent.getParent();
+      if (varDecl && Node.isVariableDeclaration(varDecl)) {
+        return varDecl.getName();
+      }
     }
   }
+
+  // Arrow / function expression inside a property assignment
+  const funcParent = func.getParent();
+  if (funcParent && Node.isPropertyAssignment(funcParent)) {
+    const objLiteral = funcParent.getParent();
+    if (objLiteral && Node.isObjectLiteralExpression(objLiteral)) {
+      const varDecl = objLiteral.getParent();
+      if (varDecl && Node.isVariableDeclaration(varDecl)) {
+        return varDecl.getName();
+      }
+    }
+  }
+
   return undefined;
 }
 
@@ -194,8 +248,8 @@ export async function buildJavaScriptCallGraph(
       const funcName = getFunctionName(func);
       if (!funcName) continue;
 
-      const className = getClassName(func);
-      const key = className ? `${rel}:${className}.${funcName}` : `${rel}:${funcName}`;
+      const containerName = getContainerName(func);
+      const key = containerName ? `${rel}:${containerName}.${funcName}` : `${rel}:${funcName}`;
       const sym = symbolMap.get(key);
       if (!sym) continue;
 

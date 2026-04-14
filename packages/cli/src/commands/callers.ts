@@ -16,10 +16,13 @@ export const callers: Command = {
     }
     const allFiles = collectFiles(root);
     await buildCallGraph(allFiles, root.absolutePath, language);
+    const dotIndex = args[2].lastIndexOf(".");
+    const parent = dotIndex > 0 ? args[2].slice(0, dotIndex) : undefined;
+    const symbolName = dotIndex > 0 ? args[2].slice(dotIndex + 1) : args[2];
     output({
       file: args[1],
       name: args[2],
-      callers: callersOf(allFiles, root.absolutePath, args[1], args[2], { transitive: flags.transitive, maxDepth: flags.depth }),
+      callers: callersOf(allFiles, root.absolutePath, args[1], symbolName, { transitive: flags.transitive, maxDepth: flags.depth, parent }),
     });
   },
 };
