@@ -32,6 +32,9 @@ echo "Tagging $TAG..."
 git tag "$TAG"
 git push --tags
 
+# Create GitHub release (triggers publish workflow)
+echo "Creating GitHub release..."
+gh release create "$TAG" --title "$VERSION" --generate-notes
+
 echo ""
-echo "Done. Now create a GitHub Release:"
-echo "  https://github.com/ryancbahan/grail-ai/releases/new?tag=$TAG"
+echo "Done. Release created: https://github.com/ryancbahan/grail-ai/releases/tag/$TAG"
