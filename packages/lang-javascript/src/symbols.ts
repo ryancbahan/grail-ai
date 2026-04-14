@@ -1,5 +1,5 @@
 import type { Node, Tree } from "web-tree-sitter";
-import type { Symbol, SymbolKind } from "@grail-ai/core";
+import type { Symbol, SymbolKind, Range } from "@grail-ai/core";
 
 export function parseJavaScriptSymbols(
   _filePath: string,
@@ -40,7 +40,7 @@ function visitSymbols(
 
     const value = node.childForFieldName("value");
     if (value) {
-      add({ name: "default", kind: "default", signature: "default", visibility: "public", ...lineRange(value) });
+      add({ name: "default", kind: "default", signature: "default", visibility: "public", ...rangeOf(value) });
       return;
     }
 
@@ -57,7 +57,7 @@ function visitSymbols(
             kind: "unknown",
             signature: exportedName,
             visibility: "public",
-            ...lineRange(specifier),
+            ...rangeOf(specifier),
           });
         }
       }
@@ -82,8 +82,13 @@ function visitSymbols(
   }
 }
 
-function lineRange(node: Node): { line: number; endLine: number } {
-  return { line: node.startPosition.row + 1, endLine: node.endPosition.row + 1 };
+function rangeOf(node: Node): { range: Range } {
+  return {
+    range: {
+      start: { line: node.startPosition.row + 1, column: node.startPosition.column },
+      end: { line: node.endPosition.row + 1, column: node.endPosition.column },
+    },
+  };
 }
 
 function extractSignature(node: Node, bodyType: string): string {
@@ -110,9 +115,9 @@ function handleDeclaration(
       const name = declaration.childForFieldName("name");
       const sig = extractSignature(declaration, "statement_block");
       if (name) {
-        add({ name: name.text, kind: "function", signature: sig, visibility, ...lineRange(declaration) });
+        add({ name: name.text, kind: "function", signature: sig, visibility, ...rangeOf(declaration) });
       } else {
-        add({ name: "default", kind: "default", signature: sig, visibility, ...lineRange(declaration) });
+        add({ name: "default", kind: "default", signature: sig, visibility, ...rangeOf(declaration) });
       }
       break;
     }
@@ -122,7 +127,7 @@ function handleDeclaration(
       const className = name?.text ?? "default";
       const sig = extractSignature(declaration, "class_body");
       const kind: SymbolKind = name ? "class" : "default";
-      add({ name: className, kind, signature: sig, visibility, ...lineRange(declaration) });
+      add({ name: className, kind, signature: sig, visibility, ...rangeOf(declaration) });
 
       // Extract class members
       const body = declaration.childForFieldName("body");
@@ -143,7 +148,7 @@ function handleDeclaration(
           const sig = eqIndex > 0
             ? child.text.slice(0, eqIndex).trim()
             : child.text;
-          add({ name: varName, kind: "variable", signature: sig, visibility, ...lineRange(declaration) });
+          add({ name: varName, kind: "variable", signature: sig, visibility, ...rangeOf(declaration) });
 
           // Emit child symbols for function properties in object literals
           const value = child.childForFieldName("value");
@@ -158,7 +163,7 @@ function handleDeclaration(
     case "type_alias_declaration": {
       const name = declaration.childForFieldName("name");
       if (name) {
-        add({ name: name.text, kind: "type", signature: declaration.text.replace(/;$/, "").trim(), visibility, ...lineRange(declaration) });
+        add({ name: name.text, kind: "type", signature: declaration.text.replace(/;$/, "").trim(), visibility, ...rangeOf(declaration) });
       }
       break;
     }
@@ -166,7 +171,7 @@ function handleDeclaration(
     case "interface_declaration": {
       const name = declaration.childForFieldName("name");
       if (name) {
-        add({ name: name.text, kind: "interface", signature: declaration.text.replace(/;$/, "").trim(), visibility, ...lineRange(declaration) });
+        add({ name: name.text, kind: "interface", signature: declaration.text.replace(/;$/, "").trim(), visibility, ...rangeOf(declaration) });
       }
       break;
     }
@@ -174,7 +179,7 @@ function handleDeclaration(
     case "enum_declaration": {
       const name = declaration.childForFieldName("name");
       if (name) {
-        add({ name: name.text, kind: "enum", signature: declaration.text.replace(/;$/, "").trim(), visibility, ...lineRange(declaration) });
+        add({ name: name.text, kind: "enum", signature: declaration.text.replace(/;$/, "").trim(), visibility, ...rangeOf(declaration) });
       }
       break;
     }
@@ -205,7 +210,7 @@ function extractClassMembers(
         signature: sig,
         visibility,
         parent: className,
-        ...lineRange(member),
+        ...rangeOf(member),
       });
     } else if (
       member.type === "public_field_definition" ||
@@ -221,7 +226,7 @@ function extractClassMembers(
         signature: member.text.replace(/;$/, "").trim(),
         visibility,
         parent: className,
-        ...lineRange(member),
+        ...rangeOf(member),
       });
     }
   }
@@ -239,7 +244,7 @@ function extractObjectMethods(
       const name = prop.childForFieldName("name");
       if (!name) continue;
       const sig = extractSignature(prop, "statement_block");
-      add({ name: name.text, kind: "method", signature: sig, visibility, parent: parentName, ...lineRange(prop) });
+      add({ name: name.text, kind: "method", signature: sig, visibility, parent: parentName, ...rangeOf(prop) });
       continue;
     }
 
@@ -254,7 +259,7 @@ function extractObjectMethods(
         || value.type === "function";
       if (isFn) {
         const sig = extractSignature(value, "statement_block");
-        add({ name: key.text, kind: "method", signature: sig, visibility, parent: parentName, ...lineRange(value) });
+        add({ name: key.text, kind: "method", signature: sig, visibility, parent: parentName, ...rangeOf(value) });
       }
     }
   }

@@ -24,8 +24,10 @@ export function locateJavaScriptSymbol(
     name: symbolName,
     kind: inferKind(node),
     parent: parentName,
-    line: startLine,
-    endLine,
+    range: {
+      start: { line: startLine, column: node.startPosition.column },
+      end: { line: endLine, column: node.endPosition.column },
+    },
     source,
   };
 }

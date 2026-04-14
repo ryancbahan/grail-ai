@@ -128,6 +128,17 @@ describe("callersOf", () => {
     expect(callersOf(filesOf(root), ROOT_PATH, "b.ts", "bar")).toEqual([]);
   });
 
+  it("propagates range from call site to caller result", () => {
+    const callRange = { start: { line: 5, column: 4 }, end: { line: 5, column: 20 } };
+    const root = makeRoot({
+      "a.ts": [sym("foo", [{ file: "b.ts", name: "bar", range: callRange, context: "bar()" }])],
+      "b.ts": [sym("bar")],
+    });
+    const result = callersOf(filesOf(root), ROOT_PATH, "b.ts", "bar");
+    expect(result).toHaveLength(1);
+    expect(result[0].range).toEqual(callRange);
+  });
+
   it("handles self-referencing calls", () => {
     const root = makeRoot({
       "a.ts": [sym("recursive", [{ file: "a.ts", name: "recursive" }])],

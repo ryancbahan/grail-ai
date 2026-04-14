@@ -1,3 +1,13 @@
+export interface Position {
+  line: number;   // 1-based
+  column: number; // 0-based
+}
+
+export interface Range {
+  start: Position;
+  end: Position;
+}
+
 export interface TreeOptions {
   ignorePaths?: string[];
   depth?: number;
@@ -14,6 +24,7 @@ export interface Import {
   resolvedPath: string | null;
   isExternal: boolean;
   symbols: ImportedSymbol[];
+  range?: Range;
 }
 
 export type SymbolKind =
@@ -38,7 +49,7 @@ export interface SymbolRef {
   parent?: string;
   signature?: string;
   visibility?: SymbolVisibility;
-  line?: number;
+  range?: Range;
   context?: string;
 }
 
@@ -48,13 +59,11 @@ export interface Symbol {
   signature: string;
   visibility: SymbolVisibility;
   parent?: string;
-  line?: number;
-  endLine?: number;
+  range?: Range;
   calls?: SymbolRef[];
 }
 
 export interface SymbolLocation extends SymbolRef {
-  endLine: number;
   source: string;
 }
 

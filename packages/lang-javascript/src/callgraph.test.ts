@@ -58,6 +58,11 @@ describe("buildJavaScriptCallGraph", () => {
       expect(mainSym!.calls).toHaveLength(1);
       expect(mainSym!.calls![0].name).toBe("helper");
       expect(mainSym!.calls![0].file).toContain("utils.ts");
+      // range should have line and column from ts-morph
+      expect(mainSym!.calls![0].range).toBeDefined();
+      expect(mainSym!.calls![0].range!.start.line).toBe(2);
+      expect(typeof mainSym!.calls![0].range!.start.column).toBe("number");
+      expect(mainSym!.calls![0].range!.end.line).toBe(2);
     });
 
     it("resolves default import calls", async () => {

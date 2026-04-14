@@ -70,19 +70,22 @@ describe("parseJavaScriptImports", () => {
   describe("ES re-exports", () => {
     it("parses export from", () => {
       const result = parse('export { foo } from "./mod"');
-      expect(result).toEqual([{ specifier: "./mod", kind: "static", symbols: [] }]);
+      expect(result).toMatchObject([{ specifier: "./mod", kind: "static", symbols: [] }]);
+      expect(result[0].range).toBeDefined();
     });
 
     it("parses export all", () => {
       const result = parse('export * from "./types"');
-      expect(result).toEqual([{ specifier: "./types", kind: "static", symbols: [] }]);
+      expect(result).toMatchObject([{ specifier: "./types", kind: "static", symbols: [] }]);
+      expect(result[0].range).toBeDefined();
     });
   });
 
   describe("CommonJS require", () => {
     it("parses require", () => {
       const result = parse('const x = require("foo")');
-      expect(result).toEqual([{ specifier: "foo", kind: "require", symbols: [] }]);
+      expect(result).toMatchObject([{ specifier: "foo", kind: "require", symbols: [] }]);
+      expect(result[0].range).toBeDefined();
     });
 
     it("parses require with single quotes", () => {
@@ -94,7 +97,8 @@ describe("parseJavaScriptImports", () => {
   describe("dynamic import", () => {
     it("parses dynamic import expression", () => {
       const result = parse('const mod = import("./lazy")');
-      expect(result).toEqual([{ specifier: "./lazy", kind: "dynamic", symbols: [] }]);
+      expect(result).toMatchObject([{ specifier: "./lazy", kind: "dynamic", symbols: [] }]);
+      expect(result[0].range).toBeDefined();
     });
   });
 
@@ -147,6 +151,35 @@ describe("parseJavaScriptImports", () => {
         const bar = require("bar");
       `);
       expect(result).toHaveLength(2);
+    });
+  });
+
+  describe("range positions", () => {
+    it("includes range on static import", () => {
+      const result = parse('import foo from "bar"');
+      expect(result[0].range).toBeDefined();
+      expect(result[0].range!.start.line).toBe(1);
+      expect(result[0].range!.start.column).toBe(0);
+      expect(result[0].range!.end.line).toBe(1);
+    });
+
+    it("includes range on multi-line import", () => {
+      const result = parse(`import {\n  a,\n  b\n} from "./utils"`);
+      expect(result[0].range!.start.line).toBe(1);
+      expect(result[0].range!.end.line).toBe(4);
+    });
+
+    it("includes range on require call expression", () => {
+      const result = parse('const x = require("foo")');
+      // Range should cover the call expression, not the full statement
+      expect(result[0].range!.start.column).toBeGreaterThan(0);
+      expect(result[0].range!.start.line).toBe(1);
+    });
+
+    it("includes range on dynamic import", () => {
+      const result = parse('const m = import("./lazy")');
+      expect(result[0].range!.start.line).toBe(1);
+      expect(result[0].range!.start.column).toBeGreaterThan(0);
     });
   });
 

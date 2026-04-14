@@ -193,6 +193,54 @@ describe("parseJavaScriptSymbols", () => {
     });
   });
 
+  describe("range positions", () => {
+    it("includes range with line and column on exported function", () => {
+      const result = parse("export function foo(x: number): void {}");
+      expect(result[0].range).toBeDefined();
+      expect(result[0].range!.start.line).toBe(1);
+      // column is 7 because rangeOf targets the function_declaration inside export_statement
+      expect(result[0].range!.start.column).toBe(7);
+      expect(result[0].range!.end.line).toBe(1);
+    });
+
+    it("includes correct range on multi-line function", () => {
+      const result = parse("const x = 1;\n\nexport function bar() {\n  return x;\n}");
+      const bar = result.find((s) => s.name === "bar");
+      expect(bar!.range!.start.line).toBe(3);
+      expect(bar!.range!.end.line).toBe(5);
+    });
+
+    it("includes range on class and its methods", () => {
+      const result = parse("export class Svc {\n  handle() {}\n}");
+      const cls = result.find((s) => s.name === "Svc");
+      const method = result.find((s) => s.name === "handle");
+      expect(cls!.range!.start.line).toBe(1);
+      expect(cls!.range!.end.line).toBe(3);
+      expect(method!.range!.start.line).toBe(2);
+      expect(method!.range!.end.line).toBe(2);
+    });
+
+    it("includes range on interface", () => {
+      const result = parse("export interface Cfg {\n  key: string;\n}");
+      expect(result[0].range!.start.line).toBe(1);
+      expect(result[0].range!.end.line).toBe(3);
+    });
+
+    it("includes range on object literal methods", () => {
+      const result = parse("export const cmd = {\n  run() {},\n};");
+      const method = result.find((s) => s.name === "run");
+      expect(method!.range).toBeDefined();
+      expect(method!.range!.start.line).toBe(2);
+    });
+
+    it("includes column offset for indented declarations", () => {
+      // Column should reflect the actual position in the line
+      const result = parse("export class Foo {\n  doStuff() {}\n}");
+      const method = result.find((s) => s.name === "doStuff");
+      expect(method!.range!.start.column).toBeGreaterThan(0);
+    });
+  });
+
   describe("edge cases", () => {
     it("extracts internal symbols from file with no exports", () => {
       const result = parse("const x = 1;");

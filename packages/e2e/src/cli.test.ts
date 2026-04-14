@@ -247,8 +247,8 @@ describe("e2e: calls", () => {
     expect(createUserCall.file).toBe("src/utils.ts");
     expect(createUserCall.kind).toBe("function");
     expect(createUserCall.signature).toContain("createUser");
-    expect(typeof createUserCall.line).toBe("number");
-    expect(createUserCall.line).toBeGreaterThan(0);
+    expect(createUserCall.range).toBeDefined();
+    expect(createUserCall.range.start.line).toBeGreaterThan(0);
     expect(typeof createUserCall.context).toBe("string");
     expect(createUserCall.context).toContain("createUser");
 
@@ -293,7 +293,8 @@ describe("e2e: callers", () => {
     expect(mainCaller.kind).toBe("function");
     expect(typeof mainCaller.signature).toBe("string");
     expect(mainCaller.signature).toContain("main");
-    expect(typeof mainCaller.line).toBe("number");
+    expect(mainCaller.range).toBeDefined();
+    expect(typeof mainCaller.range.start.line).toBe("number");
     expect(typeof mainCaller.context).toBe("string");
   });
 
@@ -363,8 +364,8 @@ describe("e2e: read", () => {
     expect(result.signature).toContain("createUser");
     expect(result.signature).toContain("name: string");
     expect(result.visibility).toBe("public");
-    expect(result.line).toBe(7);
-    expect(result.endLine).toBe(12);
+    expect(result.range.start.line).toBe(7);
+    expect(result.range.end.line).toBe(12);
     expect(result.source).toContain("export function createUser");
     expect(result.source).toContain("validateEmail");
     expect(result.source).toContain("return {");
@@ -374,8 +375,8 @@ describe("e2e: read", () => {
     const result = json(`read --path ${TS_APP} --file src/utils.ts --symbol validateEmail`);
     expect(result.name).toBe("validateEmail");
     expect(result.kind).toBe("function");
-    expect(result.line).toBe(3);
-    expect(result.endLine).toBe(5);
+    expect(result.range.start.line).toBe(3);
+    expect(result.range.end.line).toBe(5);
     expect(result.source).toContain("includes");
   });
 

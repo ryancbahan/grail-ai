@@ -121,7 +121,7 @@ export function callersOf(
               parent: sym.parent,
               signature: sym.signature,
               visibility: sym.visibility,
-              line: call.line,
+              range: call.range,
               context: call.context,
             });
           }

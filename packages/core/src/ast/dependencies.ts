@@ -45,7 +45,7 @@ export function buildDependencyGraph(
       parsed.push(...implementation.inferDependencies(filePath, content, context));
     }
 
-    const imports: Import[] = parsed.map(({ specifier, kind, symbols }) => {
+    const imports: Import[] = parsed.map(({ specifier, kind, symbols, range }) => {
       const resolvedPath = implementation.resolveImport(specifier, context);
 
       const isRelative = specifier.startsWith(".");
@@ -55,7 +55,7 @@ export function buildDependencyGraph(
         externals.add(getPackageName(specifier));
       }
 
-      return { specifier, kind, resolvedPath, isExternal, symbols };
+      return { specifier, kind, resolvedPath, isExternal, symbols, range };
     });
 
     node.imports = imports;
