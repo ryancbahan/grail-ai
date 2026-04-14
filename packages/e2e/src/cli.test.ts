@@ -1,3 +1,5 @@
+import fs from "fs";
+import os from "os";
 import path from "path";
 import { grail, json, jsonError } from "./util/cli";
 
@@ -564,5 +566,61 @@ describe("e2e: TS classes", () => {
     expect(typesImport.symbols[0].name).toBe("User");
     expect(typesImport.symbols[0].kind).toBe("interface");
     expect(typesImport.symbols[0].signature).toContain("id: number");
+  });
+});
+
+// ── Skill Command ───────────────────────────────────────────────
+
+describe("e2e: skill", () => {
+  it("outputs skill content to stdout", () => {
+    const output = grail("skill");
+    expect(output).toContain("name: grail");
+    expect(output).toContain("grail_summary");
+    expect(output).toContain("grail_calls");
+    expect(output).toContain("Progressive");
+    expect(output).toContain("npx grail-ai");
+  });
+
+  it("installs skill to a custom path", () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "grail-skill-"));
+    const skillPath = path.join(tmpDir, "SKILL.md");
+
+    try {
+      const result = json(`skill --install ${skillPath}`);
+      expect(result.installed).toBe(skillPath);
+      expect(fs.existsSync(skillPath)).toBe(true);
+
+      const content = fs.readFileSync(skillPath, "utf-8");
+      expect(content).toContain("name: grail");
+      expect(content).toContain("grail_summary");
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it("installs skill to default path with --install", () => {
+    const result = json("skill --install");
+    const installedPath = result.installed;
+    expect(installedPath).toContain(".claude");
+    expect(installedPath).toContain("skills");
+    expect(installedPath).toContain("grail");
+    expect(installedPath).toContain("SKILL.md");
+    expect(fs.existsSync(installedPath)).toBe(true);
+
+    // Clean up
+    fs.rmSync(installedPath);
+  });
+
+  it("creates nested directories when installing", () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "grail-skill-nested-"));
+    const skillPath = path.join(tmpDir, "deep", "nested", "SKILL.md");
+
+    try {
+      const result = json(`skill --install ${skillPath}`);
+      expect(result.installed).toBe(skillPath);
+      expect(fs.existsSync(skillPath)).toBe(true);
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
   });
 });
