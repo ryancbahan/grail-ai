@@ -1,378 +1,42 @@
 #!/usr/bin/env node
 
-import fs from "fs";
-import os from "os";
-import path from "path";
-import {
-  analyze,
-  registerLanguage,
-  dependenciesOf,
-  dependentsOf,
-  allExternals,
-  findEntryPoints,
-  findCircularDependencies,
-  collectFiles,
-  readSymbol,
-  buildCallGraph,
-  callsOf,
-  callersOf,
-} from "@grail-ai/core";
-import type { ASTNode, FileNode, Symbol as GrailSymbol } from "@grail-ai/core";
-import { javascript } from "@grail-ai/lang-javascript";
+import type { Command } from "./types";
+import { fail, parseArgs } from "./utils/util";
 
-registerLanguage(javascript);
+import { help } from "./commands/help";
+import { skill } from "./commands/skill";
+import { tree } from "./commands/tree";
+import { summary } from "./commands/summary";
+import { dependencies } from "./commands/dependencies";
+import { dependents } from "./commands/dependents";
+import { externals } from "./commands/externals";
+import { entryPoints } from "./commands/entry-points";
+import { cycles } from "./commands/cycles";
+import { files } from "./commands/files";
+import { calls } from "./commands/calls";
+import { callers } from "./commands/callers";
+import { read } from "./commands/read";
+import { jsonCmd } from "./commands/json";
 
-const HELP = `
-grail - codebase analyzer
-
-Usage:
-  grail <path>                          Show file tree
-  grail <path> summary [file]           File summaries with symbols + deps
-  grail <path> dependencies <file>      What a file imports (with signatures)
-  grail <path> dependents <file>        What imports a file (with consumed symbols)
-  grail <path> externals [file]         External packages
-  grail <path> entry-points             Files nothing imports
-  grail <path> cycles                   Circular dependencies
-  grail <path> files                    List all file paths
-  grail <path> calls <file> <symbol>     What does this function call (with signatures)
-  grail <path> callers <file> <symbol>  What calls this function
-  grail <path> read <file> <symbol>      Read a symbol's source code
-  grail <path> json                     Full AST as JSON
-
-  grail skill                          Print Claude Code skill to stdout
-  grail skill --install [path]         Install skill to a path (default: .claude/skills/grail/SKILL.md)
-
-Options:
-  --depth <n>                          Limit traversal depth (directory or call chain)
-  --transitive                         Follow calls/callers transitively (full chain)
-`.trim();
-
-function resolveFile(rootPath: string, file: string): string {
-  if (path.isAbsolute(file)) return file;
-  return path.resolve(rootPath, file);
-}
-
-function findFileNode(
-  allFiles: ReturnType<typeof collectFiles>,
-  filePath: string
-): { filePath: string; node: FileNode } | undefined {
-  return allFiles.find((f) => f.filePath === filePath);
-}
-
-function lookupSymbol(
-  allFiles: ReturnType<typeof collectFiles>,
-  resolvedPath: string,
-  symbolName: string
-): GrailSymbol | undefined {
-  const file = allFiles.find((f) => f.filePath === resolvedPath);
-  if (!file) return undefined;
-  return file.node.symbols.find((s) => s.name === symbolName);
-}
-
-function fail(error: string, suggestion?: string): never {
-  console.log(JSON.stringify({ error, ...(suggestion ? { suggestion } : {}) }));
-  process.exit(1);
-}
+const commands: Command[] = [
+  help, skill, tree, summary, dependencies, dependents, externals,
+  entryPoints, cycles, files, calls, callers, read, jsonCmd,
+];
 
 async function main() {
-  const args = process.argv.slice(2);
+  const argv = process.argv.slice(2);
 
-  if (args.includes("--help") || args.includes("-h") || args.length === 0) {
-    console.log(HELP);
-    process.exit(0);
+  if (argv.includes("--help") || argv.includes("-h") || argv.length === 0) {
+    await help.run([], { depth: undefined, transitive: false, install: false });
+    return;
   }
 
-  // Parse flags from anywhere in args
-  let depth: number | undefined;
-  let transitive = false;
-  const filteredArgs: string[] = [];
-  for (let i = 0; i < args.length; i++) {
-    if (args[i] === "--depth" && args[i + 1]) {
-      depth = parseInt(args[i + 1], 10);
-      i++;
-    } else if (args[i] === "--transitive") {
-      transitive = true;
-    } else {
-      filteredArgs.push(args[i]);
-    }
-  }
+  const { commandName, args, flags } = parseArgs(argv);
 
-  // Handle skill command before analyze (no path needed)
-  if (filteredArgs[0] === "skill") {
-    const skillSource = path.resolve(__dirname, "../../skill/SKILL.md");
-    let skillContent: string;
-    try {
-      skillContent = fs.readFileSync(skillSource, "utf-8");
-    } catch {
-      // Fallback: try relative to the package when installed via npm
-      const altPath = path.resolve(__dirname, "../../../skill/SKILL.md");
-      try {
-        skillContent = fs.readFileSync(altPath, "utf-8");
-      } catch {
-        fail("Could not find SKILL.md", "Ensure the grail-ai package is installed correctly");
-      }
-    }
+  const command = commands.find((c) => c.name === commandName);
+  if (!command) fail(`Unknown command: ${commandName}`, "Run with --help to see available commands");
 
-    const installFlag = args.includes("--install");
-    if (!installFlag) {
-      console.log(skillContent);
-      process.exit(0);
-    }
-
-    // Find the --install value (path after --install, or default)
-    const installIdx = args.indexOf("--install");
-    const installArg = args[installIdx + 1] && !args[installIdx + 1].startsWith("--")
-      ? args[installIdx + 1]
-      : null;
-
-    const targetDir = installArg
-      ? path.resolve(path.dirname(installArg))
-      : path.resolve(process.cwd(), ".claude", "skills", "grail");
-    const targetFile = installArg
-      ? path.resolve(installArg)
-      : path.join(targetDir, "SKILL.md");
-
-    fs.mkdirSync(targetDir, { recursive: true });
-    fs.writeFileSync(targetFile, skillContent);
-    console.log(JSON.stringify({ installed: targetFile }));
-    process.exit(0);
-  }
-
-  const targetPath = filteredArgs[0];
-  const command = filteredArgs[1] || "tree";
-  const commandArg = filteredArgs[2];
-
-  const treeCommands = new Set(["tree", "summary", "files", "externals", "entry-points", "cycles", "json"]);
-  const fsDepth = treeCommands.has(command) ? depth : undefined;
-  const { root, language } = await analyze(targetPath, { depth: fsDepth });
-  const rel = (p: string) => path.relative(root.absolutePath, p);
-  const allFiles = collectFiles(root);
-
-  switch (command) {
-    case "tree": {
-      function toTreeJson(node: ASTNode): object {
-        if (node.type === "file") {
-          return { name: node.name, type: "file", extension: node.extension };
-        }
-        return {
-          name: node.name,
-          type: "directory",
-          children: node.children.map(toTreeJson),
-        };
-      }
-      console.log(JSON.stringify({
-        root: root.absolutePath,
-        language: language?.descriptor.name ?? null,
-        tree: toTreeJson(root.tree),
-      }, null, 2));
-      break;
-    }
-
-    case "summary": {
-      if (commandArg) {
-        const filePath = resolveFile(root.absolutePath, commandArg);
-        const file = findFileNode(allFiles, filePath);
-        if (!file) fail(`File not found: ${commandArg}`, "Check the file path is relative to the project root");
-        console.log(JSON.stringify({
-          file: rel(filePath),
-          symbols: file.node.symbols,
-          imports: file.node.imports.map((imp) => ({
-            specifier: imp.specifier,
-            kind: imp.kind,
-            resolvedPath: imp.resolvedPath ? rel(imp.resolvedPath) : null,
-            isExternal: imp.isExternal,
-            symbols: imp.symbols,
-          })),
-        }, null, 2));
-      } else {
-        const result = allFiles.map(({ filePath, node }) => ({
-          file: rel(filePath),
-          symbols: node.symbols
-            .filter((s) => !s.parent)
-            .map((s) => ({ file: rel(filePath), name: s.name, kind: s.kind, signature: s.signature, visibility: s.visibility })),
-          dependencies: node.imports.filter((i) => !i.isExternal).length,
-          externals: [...new Set(node.imports.filter((i) => i.isExternal).map((i) => i.specifier))],
-        }));
-        console.log(JSON.stringify(result, null, 2));
-      }
-      break;
-    }
-
-    case "dependencies": {
-      if (!commandArg) fail("Missing file argument", "Usage: grail <path> dependencies <file>");
-      const filePath = resolveFile(root.absolutePath, commandArg);
-      const file = findFileNode(allFiles, filePath);
-      if (!file) fail(`File not found: ${commandArg}`, "Check the file path is relative to the project root");
-
-      const result = file.node.imports.map((imp) => {
-        const resolvedSymbols = imp.symbols.map((s) => {
-          const resolved = imp.resolvedPath
-            ? lookupSymbol(allFiles, imp.resolvedPath, s.originalName)
-            : undefined;
-          return {
-            file: imp.resolvedPath ? rel(imp.resolvedPath) : null,
-            name: s.name,
-            originalName: s.originalName,
-            kind: resolved?.kind ?? undefined,
-            signature: resolved?.signature ?? undefined,
-          };
-        });
-
-        return {
-          specifier: imp.specifier,
-          kind: imp.kind,
-          resolvedPath: imp.resolvedPath ? rel(imp.resolvedPath) : null,
-          isExternal: imp.isExternal,
-          symbols: resolvedSymbols,
-        };
-      });
-
-      console.log(JSON.stringify({
-        file: rel(filePath),
-        dependencies: result,
-      }, null, 2));
-      break;
-    }
-
-    case "dependents": {
-      if (!commandArg) fail("Missing file argument", "Usage: grail <path> dependents <file>");
-      const filePath = resolveFile(root.absolutePath, commandArg);
-      const depPaths = dependentsOf(allFiles, filePath);
-
-      const result = depPaths.map((depPath) => {
-        const depFile = findFileNode(allFiles, depPath);
-        const consumedImport = depFile?.node.imports.find((i) => i.resolvedPath === filePath);
-        const targetFile = findFileNode(allFiles, filePath);
-        const symbols = (consumedImport?.symbols ?? []).map((s) => {
-          const targetSym = targetFile?.node.symbols.find((sym) => sym.name === s.originalName);
-          return {
-            file: rel(filePath),
-            name: s.originalName,
-            kind: targetSym?.kind,
-            signature: targetSym?.signature,
-          };
-        });
-        return { file: rel(depPath), symbols };
-      });
-
-      console.log(JSON.stringify({
-        file: rel(filePath),
-        dependents: result,
-      }, null, 2));
-      break;
-    }
-
-    case "externals": {
-      if (commandArg) {
-        const filePath = resolveFile(root.absolutePath, commandArg);
-        const file = findFileNode(allFiles, filePath);
-        if (!file) fail(`File not found: ${commandArg}`, "Check the file path is relative to the project root");
-        const exts = [...new Set(file.node.imports.filter((i) => i.isExternal).map((i) => i.specifier))];
-        console.log(JSON.stringify({ file: rel(filePath), externals: exts }, null, 2));
-      } else {
-        console.log(JSON.stringify({ externals: allExternals(root) }, null, 2));
-      }
-      break;
-    }
-
-    case "entry-points": {
-      const entries = findEntryPoints(allFiles).map(rel);
-      console.log(JSON.stringify({ entryPoints: entries }, null, 2));
-      break;
-    }
-
-    case "cycles": {
-      const cycles = findCircularDependencies(allFiles).map((c) => c.map(rel));
-      console.log(JSON.stringify({ cycles }, null, 2));
-      break;
-    }
-
-    case "files": {
-      const files = allFiles.map((f) => rel(f.filePath));
-      console.log(JSON.stringify({ files }, null, 2));
-      break;
-    }
-
-    case "calls": {
-      if (!commandArg || !filteredArgs[3]) fail("Missing file or symbol argument", "Usage: grail <path> calls <file> <symbol>");
-      if (!language) {
-        console.log(JSON.stringify({ error: "No language detected", suggestion: "Ensure the project has recognizable marker files or source files" }));
-        break;
-      }
-      if (!language.implementation.buildCallGraph) {
-        console.log(JSON.stringify({
-          error: "Call graph not available",
-          reason: `The ${language.descriptor.name} language plugin does not support call resolution`,
-          suggestion: "Use 'dependencies' and 'dependents' for file-level relationships",
-        }));
-        break;
-      }
-      await buildCallGraph(allFiles, root.absolutePath, language);
-      console.log(JSON.stringify({
-        file: commandArg,
-        name: filteredArgs[3],
-        calls: callsOf(allFiles, root.absolutePath, commandArg, filteredArgs[3], { transitive, maxDepth: depth }),
-      }, null, 2));
-      break;
-    }
-
-    case "callers": {
-      if (!commandArg || !filteredArgs[3]) fail("Missing file or symbol argument", "Usage: grail <path> callers <file> <symbol>");
-      if (!language) {
-        console.log(JSON.stringify({ error: "No language detected", suggestion: "Ensure the project has recognizable marker files or source files" }));
-        break;
-      }
-      if (!language.implementation.buildCallGraph) {
-        console.log(JSON.stringify({
-          error: "Call graph not available",
-          reason: `The ${language.descriptor.name} language plugin does not support call resolution`,
-          suggestion: "Use 'dependencies' and 'dependents' for file-level relationships",
-        }));
-        break;
-      }
-      await buildCallGraph(allFiles, root.absolutePath, language);
-      console.log(JSON.stringify({
-        file: commandArg,
-        name: filteredArgs[3],
-        callers: callersOf(allFiles, root.absolutePath, commandArg, filteredArgs[3], { transitive, maxDepth: depth }),
-      }, null, 2));
-      break;
-    }
-
-    case "read": {
-      if (!commandArg) fail("Missing file argument", "Usage: grail <path> read <file> <symbol> [parent]");
-      const symbolName = filteredArgs[3];
-      const parentName = filteredArgs[4];
-      if (!symbolName) fail("Missing symbol argument", "Usage: grail <path> read <file> <symbol> [parent]");
-      if (!language) fail("No language detected", "Ensure the project has recognizable marker files or source files");
-      const filePath = resolveFile(root.absolutePath, commandArg);
-      const location = readSymbol(allFiles, root.absolutePath, language, filePath, symbolName, parentName);
-      if (!location) fail(`Symbol not found: ${symbolName} in ${commandArg}`, "Check the symbol name and file path");
-      // Look up the symbol for signature/visibility
-      const fileNode = findFileNode(allFiles, filePath);
-      const symData = fileNode?.node.symbols.find((s) => s.name === symbolName && s.parent === parentName);
-      console.log(JSON.stringify({
-        file: rel(location.file),
-        name: location.name,
-        kind: location.kind,
-        parent: location.parent,
-        signature: symData?.signature,
-        visibility: symData?.visibility,
-        line: location.line,
-        endLine: location.endLine,
-        source: location.source,
-      }, null, 2));
-      break;
-    }
-
-    case "json": {
-      console.log(JSON.stringify(root, null, 2));
-      break;
-    }
-
-    default:
-      fail(`Unknown command: ${command}`, `Run with --help to see available commands`);
-  }
+  await command.run(args, flags);
 }
 
 main().catch((err: unknown) => {

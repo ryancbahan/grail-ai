@@ -1,7 +1,7 @@
 import { execSync } from "child_process";
 import path from "path";
 
-const CLI = path.resolve(__dirname, "index.ts");
+const CLI = path.resolve(__dirname, "../index.ts");
 
 function run(args: string): { stdout: string; exitCode: number } {
   try {
