@@ -12,7 +12,9 @@ function enrichCall(call: SymbolRef, files: FileEntry[], rootPath: string): Symb
     path.relative(rootPath, f.filePath) === call.file
   );
   const targetSym = targetFile?.node.symbols.find(
-    (s) => s.name === call.name && s.parent === call.parent
+    (s) => s.name === call.name &&
+      s.parent === call.parent &&
+      (call.kind === undefined || s.kind === call.kind)
   );
   return {
     ...call,
@@ -22,15 +24,32 @@ function enrichCall(call: SymbolRef, files: FileEntry[], rootPath: string): Symb
 }
 
 function symKey(ref: SymbolRef): string {
-  return ref.parent ? `${ref.file}:${ref.parent}.${ref.name}` : `${ref.file}:${ref.name}`;
+  const kind = ref.kind ? `:${ref.kind}` : "";
+  return ref.parent ? `${ref.file}:${ref.parent}.${ref.name}${kind}` : `${ref.file}:${ref.name}${kind}`;
+}
+
+function pickSymbol(
+  symbols: FileEntry["node"]["symbols"],
+  symbolName: string,
+  parent?: string
+): FileEntry["node"]["symbols"][number] | undefined {
+  const matches = symbols.filter((s) =>
+    s.name === symbolName && (parent === undefined || s.parent === parent)
+  );
+  if (matches.length <= 1) return matches[0];
+  return matches.find((s) => s.kind === "method") ?? matches[0];
 }
 
 function sortByDepth(calls: SymbolRef[], files: FileEntry[], rootPath: string): SymbolRef[] {
   return [...calls].sort((a, b) => {
     const aFile = files.find((f) => path.relative(rootPath, f.filePath) === a.file);
     const bFile = files.find((f) => path.relative(rootPath, f.filePath) === b.file);
-    const aSym = aFile?.node.symbols.find((s) => s.name === a.name && s.parent === a.parent);
-    const bSym = bFile?.node.symbols.find((s) => s.name === b.name && s.parent === b.parent);
+    const aSym = aFile?.node.symbols.find((s) =>
+      s.name === a.name && s.parent === a.parent && (a.kind === undefined || s.kind === a.kind)
+    );
+    const bSym = bFile?.node.symbols.find((s) =>
+      s.name === b.name && s.parent === b.parent && (b.kind === undefined || s.kind === b.kind)
+    );
     const aCallCount = aSym?.calls?.length ?? 0;
     const bCallCount = bSym?.calls?.length ?? 0;
     return aCallCount - bCallCount;
@@ -48,9 +67,7 @@ export function callsOf(
   const file = files.find((f) => f.filePath === absPath);
   if (!file) return [];
 
-  const symbol = file.node.symbols.find((s) =>
-    s.name === symbolName && (options.parent === undefined || s.parent === options.parent)
-  );
+  const symbol = pickSymbol(file.node.symbols, symbolName, options.parent);
   if (!symbol || !symbol.calls) return [];
 
   if (!options.transitive) {
@@ -81,7 +98,9 @@ export function callsOf(
           path.relative(rootPath, f.filePath) === ref.file
         );
         const targetSym = targetFile?.node.symbols.find(
-          (s) => s.name === ref.name && s.parent === ref.parent
+          (s) => s.name === ref.name &&
+            s.parent === ref.parent &&
+            (ref.kind === undefined || s.kind === ref.kind)
         );
         if (targetSym?.calls) {
           for (const subcall of targetSym.calls) {

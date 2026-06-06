@@ -1,6 +1,6 @@
 {
   "name": "grail-ai",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Grail CLI - codebase analyzer",
   "main": "dist/index.js",
   "bin": {
@@ -13,7 +13,8 @@
   },
   "dependencies": {
     "@grail-ai/core": "*",
-    "@grail-ai/lang-javascript": "*"
+    "@grail-ai/lang-javascript": "*",
+    "@grail-ai/lang-ruby": "*"
   },
   "devDependencies": {
     "@types/jest": "^30.0.0",

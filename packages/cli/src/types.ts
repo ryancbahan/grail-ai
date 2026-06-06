@@ -5,6 +5,7 @@ export interface Flags {
   parent?: string;
   line?: number;
   depth?: number;
+  language?: string;
   transitive: boolean;
   install?: boolean;
 }

@@ -5,7 +5,7 @@
     "packages/*"
   ],
   "scripts": {
-    "build": "npm run build -w packages/core && npm run build -w packages/lang-javascript && npm run build -w packages/cli && npm run build -w packages/web && npm run build -w packages/mcp",
+    "build": "npm run build -w packages/core && npm run build -w packages/lang-javascript && npm run build -w packages/lang-ruby && npm run build -w packages/cli && npm run build -w packages/web && npm run build -w packages/mcp",
     "test": "npm test --workspaces",
     "grail-ai": "ts-node packages/cli/src/index.ts",
     "ui": "ts-node packages/web/src/server.ts"

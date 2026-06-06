@@ -42,6 +42,10 @@ export function detectLanguage(dirPath: string): LanguageDescriptor | undefined 
   return best;
 }
 
+export function getLanguageDescriptor(name: string): LanguageDescriptor | undefined {
+  return descriptors.find((d) => d.name === name);
+}
+
 export async function loadLanguage(descriptor: LanguageDescriptor): Promise<Language> {
   const cached = loadedLanguages.get(descriptor.name);
   if (cached) return cached;

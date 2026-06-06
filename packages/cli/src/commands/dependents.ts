@@ -1,17 +1,15 @@
+import "../languages";
 import path from "path";
-import { analyze, registerLanguage, collectFiles, dependentsOf } from "@grail-ai/core";
-import { javascript } from "@grail-ai/lang-javascript";
+import { analyze, collectFiles, dependentsOf } from "@grail-ai/core";
 import type { Command } from "../types";
 import { fail, output, resolveFile, findFile } from "../utils/util";
-
-registerLanguage(javascript);
 
 export const dependents: Command = {
   name: "dependents",
   run: async (flags) => {
     if (!flags.path) fail("Missing --path argument", "Usage: grail-ai dependents --path <dir> --file <file>");
     if (!flags.file) fail("Missing --file argument", "Usage: grail-ai dependents --path <dir> --file <file>");
-    const { root } = await analyze(flags.path);
+    const { root } = await analyze(flags.path, { language: flags.language });
     const rel = (p: string) => path.relative(root.absolutePath, p);
     const allFiles = collectFiles(root);
     const filePath = resolveFile(root.absolutePath, flags.file);

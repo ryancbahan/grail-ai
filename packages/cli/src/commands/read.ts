@@ -1,10 +1,8 @@
+import "../languages";
 import path from "path";
-import { analyze, registerLanguage, collectFiles, readSymbol } from "@grail-ai/core";
-import { javascript } from "@grail-ai/lang-javascript";
+import { analyze, collectFiles, readSymbol } from "@grail-ai/core";
 import type { Command } from "../types";
 import { fail, output, resolveFile, findFile } from "../utils/util";
-
-registerLanguage(javascript);
 
 export const read: Command = {
   name: "read",
@@ -12,7 +10,7 @@ export const read: Command = {
     if (!flags.path) fail("Missing --path argument", "Usage: grail-ai read --path <dir> --file <file> --symbol <symbol>");
     if (!flags.file) fail("Missing --file argument", "Usage: grail-ai read --path <dir> --file <file> --symbol <symbol>");
     if (!flags.symbol && flags.line === undefined) fail("Missing --symbol or --line argument", "Usage: grail-ai read --path <dir> --file <file> (--symbol <symbol> | --line <n>)");
-    const { root, language } = await analyze(flags.path);
+    const { root, language } = await analyze(flags.path, { language: flags.language });
     if (!language) fail("No language detected", "Ensure the project has recognizable marker files or source files");
     const rel = (p: string) => path.relative(root.absolutePath, p);
     const allFiles = collectFiles(root);

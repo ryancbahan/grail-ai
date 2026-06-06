@@ -33,6 +33,7 @@ export function parseArgs(argv: string[]): { commandName: string; flags: Flags }
   let parent: string | undefined;
   let line: number | undefined;
   let depth: number | undefined;
+  let language: string | undefined;
   let transitive = false;
   let install = false;
   const positional: string[] = [];
@@ -44,6 +45,7 @@ export function parseArgs(argv: string[]): { commandName: string; flags: Flags }
     else if (argv[i] === "--parent" && argv[i + 1]) { parent = argv[++i]; }
     else if (argv[i] === "--line" && argv[i + 1]) { line = parseInt(argv[++i], 10); }
     else if (argv[i] === "--depth" && argv[i + 1]) { depth = parseInt(argv[++i], 10); }
+    else if (argv[i] === "--language" && argv[i + 1]) { language = argv[++i]; }
     else if (argv[i] === "--transitive") { transitive = true; }
     else if (argv[i] === "--install") { install = true; }
     else { positional.push(argv[i]); }
@@ -51,5 +53,5 @@ export function parseArgs(argv: string[]): { commandName: string; flags: Flags }
 
   const commandName = positional[0] || "help";
 
-  return { commandName, flags: { path: p, file, symbol, parent, line, depth, transitive, install } };
+  return { commandName, flags: { path: p, file, symbol, parent, line, depth, language, transitive, install } };
 }

@@ -1,16 +1,14 @@
+import "../languages";
 import path from "path";
-import { analyze, registerLanguage, collectFiles, allExternals } from "@grail-ai/core";
-import { javascript } from "@grail-ai/lang-javascript";
+import { analyze, collectFiles, allExternals } from "@grail-ai/core";
 import type { Command } from "../types";
 import { fail, output, resolveFile, findFile } from "../utils/util";
-
-registerLanguage(javascript);
 
 export const externals: Command = {
   name: "externals",
   run: async (flags) => {
     if (!flags.path) fail("Missing --path argument", "Usage: grail-ai externals --path <dir> [--file <file>]");
-    const { root } = await analyze(flags.path, { depth: flags.depth });
+    const { root } = await analyze(flags.path, { depth: flags.depth, language: flags.language });
     const rel = (p: string) => path.relative(root.absolutePath, p);
     const allFiles = collectFiles(root);
 

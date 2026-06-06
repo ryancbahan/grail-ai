@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import { buildTree } from "./ast/builder";
 import { buildDependencyGraph } from "./ast/dependencies";
-import { detectLanguage, loadLanguage } from "./languages";
+import { detectLanguage, getLanguageDescriptor, loadLanguage } from "./languages";
 import { RootNode, TreeOptions } from "./ast/types";
 import { Language } from "./languages/types";
 
@@ -25,6 +25,7 @@ function findProjectRoot(filePath: string): string {
 
 export interface AnalyzeOptions {
   depth?: number;
+  language?: string;
 }
 
 export interface AnalysisResult {
@@ -35,7 +36,9 @@ export interface AnalysisResult {
 export async function analyze(dirPath: string, options: AnalyzeOptions = {}): Promise<AnalysisResult> {
   const resolved = path.resolve(dirPath);
   const projectRoot = fs.statSync(resolved).isDirectory() ? resolved : findProjectRoot(resolved);
-  const descriptor = detectLanguage(projectRoot);
+  const descriptor = options.language
+    ? getLanguageDescriptor(options.language)
+    : detectLanguage(projectRoot);
 
   let language: Language | undefined;
   if (descriptor) {

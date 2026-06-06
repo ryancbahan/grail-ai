@@ -1,9 +1,7 @@
-import { analyze, registerLanguage, collectFiles, buildCallGraph, callersOf } from "@grail-ai/core";
-import { javascript } from "@grail-ai/lang-javascript";
+import "../languages";
+import { analyze, collectFiles, buildCallGraph, callersOf } from "@grail-ai/core";
 import type { Command } from "../types";
 import { fail, output } from "../utils/util";
-
-registerLanguage(javascript);
 
 export const callers: Command = {
   name: "callers",
@@ -11,7 +9,7 @@ export const callers: Command = {
     if (!flags.path) fail("Missing --path argument", "Usage: grail-ai callers --path <dir> --file <file> --symbol <symbol>");
     if (!flags.file) fail("Missing --file argument", "Usage: grail-ai callers --path <dir> --file <file> --symbol <symbol>");
     if (!flags.symbol) fail("Missing --symbol argument", "Usage: grail-ai callers --path <dir> --file <file> --symbol <symbol>");
-    const { root, language } = await analyze(flags.path);
+    const { root, language } = await analyze(flags.path, { language: flags.language });
     if (!language) fail("No language detected", "Ensure the project has recognizable marker files or source files");
     if (!language.implementation.buildCallGraph) {
       fail("Call graph not available", `The ${language.descriptor.name} language plugin does not support call resolution`);
