@@ -118,6 +118,8 @@ Or copy `packages/skill/SKILL.md` to `~/.claude/skills/grail/SKILL.md`.
 packages/
 ├── core/              @grail-ai/core              — AST engine, types, queries, grammar loader
 ├── lang-javascript/   @grail-ai/lang-javascript   — JS/TS via tree-sitter
+├── lang-ruby/         @grail-ai/lang-ruby         — Ruby/Rails via tree-sitter
+├── lang-rust/         @grail-ai/lang-rust         — Rust via tree-sitter
 ├── cli/               grail-ai                    — CLI
 ├── mcp/               @grail-ai/mcp               — MCP server
 ├── web/               @grail-ai/web               — Preact + D3 visualization

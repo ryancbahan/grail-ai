@@ -45,6 +45,8 @@ All commands output JSON.
 
 - [`@grail-ai/core`](https://www.npmjs.com/package/@grail-ai/core) — Analysis engine
 - [`@grail-ai/lang-javascript`](https://www.npmjs.com/package/@grail-ai/lang-javascript) — JS/TS language support
+- [`@grail-ai/lang-ruby`](https://www.npmjs.com/package/@grail-ai/lang-ruby) — Ruby/Rails language support
+- [`@grail-ai/lang-rust`](https://www.npmjs.com/package/@grail-ai/lang-rust) — Rust language support
 - [`@grail-ai/mcp`](https://www.npmjs.com/package/@grail-ai/mcp) — MCP server for AI agents
 
 GitHub: [ryancbahan/grail-ai](https://github.com/ryancbahan/grail-ai)

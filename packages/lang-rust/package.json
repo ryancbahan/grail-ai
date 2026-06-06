@@ -1,22 +1,16 @@
 {
-  "name": "@grail-ai/web",
+  "name": "@grail-ai/lang-rust",
   "version": "0.2.3",
-  "description": "Grail web visualization",
-  "main": "dist/server.js",
+  "description": "Rust language support for Grail",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc",
-    "test": "jest",
-    "ui": "ts-node src/server.ts"
+    "test": "jest"
   },
   "dependencies": {
     "@grail-ai/core": "*",
-    "@grail-ai/lang-javascript": "*",
-    "@grail-ai/lang-ruby": "*",
-    "@grail-ai/lang-rust": "*",
-    "d3": "^7.9.0",
-    "esbuild": "^0.28.0",
-    "preact": "^10.29.1",
-    "@types/d3": "^7.4.3"
+    "tree-sitter-rust": "^0.24.0"
   },
   "devDependencies": {
     "@types/jest": "^30.0.0",

@@ -41,9 +41,11 @@ This checks out `main`, verifies the version matches, tags, pushes the tag, and 
 
 1. `@grail-ai/core`
 2. `@grail-ai/lang-javascript`
-3. `grail-ai` (CLI)
-4. `@grail-ai/web`
-5. `@grail-ai/mcp`
+3. `@grail-ai/lang-ruby`
+4. `@grail-ai/lang-rust`
+5. `grail-ai` (CLI)
+6. `@grail-ai/web`
+7. `@grail-ai/mcp`
 
 ## Troubleshooting
 

@@ -1,6 +1,6 @@
 {
   "name": "@grail-ai/core",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Grail core analysis engine",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

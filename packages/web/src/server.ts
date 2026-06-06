@@ -6,8 +6,12 @@ import * as esbuild from "esbuild";
 import { analyze, registerLanguage } from "@grail-ai/core";
 import type { RootNode } from "@grail-ai/core";
 import { javascript } from "@grail-ai/lang-javascript";
+import { ruby } from "@grail-ai/lang-ruby";
+import { rust } from "@grail-ai/lang-rust";
 
 registerLanguage(javascript);
+registerLanguage(ruby);
+registerLanguage(rust);
 
 export function parseArgs(argv: string[]): string | null {
   const args = argv.slice(2);
