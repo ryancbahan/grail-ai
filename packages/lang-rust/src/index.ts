@@ -12,6 +12,7 @@ export const rust: LanguageDescriptor = {
     },
   ],
   treeOptions: {
+    sourceExtensions: [".rs"],
     ignorePaths: [
       "target",
       ".git",
@@ -32,6 +33,8 @@ export const rust: LanguageDescriptor = {
       parseImports: imports.parseRustImports,
       parseSymbols: symbols.parseRustSymbols,
       resolveImport: resolver.resolveRustImport,
+      isExternalImport: resolver.isRustExternalImport,
+      externalPackageName: resolver.rustExternalPackageName,
       locateSymbol: locator.locateRustSymbol,
       buildCallGraph: callgraph.buildRustCallGraph,
     };

@@ -26,6 +26,7 @@ function findProjectRoot(filePath: string): string {
 export interface AnalyzeOptions {
   depth?: number;
   language?: string;
+  sourceAware?: boolean;
 }
 
 export interface AnalysisResult {
@@ -45,10 +46,15 @@ export async function analyze(dirPath: string, options: AnalyzeOptions = {}): Pr
     language = await loadLanguage(descriptor);
   }
 
+  const descriptorTreeOptions = descriptor?.treeOptions ?? {};
   const treeOptions: TreeOptions = {
-    ...descriptor?.treeOptions,
+    ...descriptorTreeOptions,
     ...(options.depth !== undefined ? { depth: options.depth } : {}),
   };
+  if (options.sourceAware === false) {
+    delete treeOptions.sourceExtensions;
+    delete treeOptions.sourceFileNames;
+  }
 
   const root = buildTree(projectRoot, treeOptions);
 

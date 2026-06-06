@@ -49,10 +49,14 @@ export function buildDependencyGraph(
       const resolvedPath = implementation.resolveImport(specifier, context);
 
       const isRelative = specifier.startsWith(".");
-      const isExternal = !isRelative && resolvedPath === null;
+      const isExternal = resolvedPath === null && (
+        implementation.isExternalImport
+          ? implementation.isExternalImport(specifier, context)
+          : !isRelative
+      );
 
       if (isExternal) {
-        externals.add(getPackageName(specifier));
+        externals.add(implementation.externalPackageName?.(specifier) ?? getPackageName(specifier));
       }
 
       return { specifier, kind, resolvedPath, isExternal, symbols, range };

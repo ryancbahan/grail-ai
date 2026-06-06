@@ -22,6 +22,8 @@ export interface LanguageImplementation {
   parseImports: (filePath: string, content: string, tree: unknown) => ParsedImport[];
   parseSymbols: (filePath: string, content: string, tree: unknown) => Symbol[];
   resolveImport: (specifier: string, context: ResolveContext) => string | null;
+  isExternalImport?: (specifier: string, context: ResolveContext) => boolean;
+  externalPackageName?: (specifier: string) => string;
   locateSymbol: (filePath: string, content: string, tree: unknown, symbolName: string, parentName?: string) => SymbolLocation | null;
   inferDependencies?: (filePath: string, content: string, context: ResolveContext) => ParsedImport[];
   buildCallGraph?: (projectRoot: string, files: FileEntry[]) => Promise<void>;

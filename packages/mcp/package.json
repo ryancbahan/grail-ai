@@ -1,6 +1,6 @@
 {
   "name": "@grail-ai/mcp",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "description": "Grail MCP server — codebase analysis for AI agents",
   "type": "module",
   "main": "dist/index.js",

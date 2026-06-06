@@ -22,7 +22,12 @@ describe("parseRustImports", () => {
     expect(result).toHaveLength(1);
     expect(result[0].specifier).toBe("std::collections::{HashMap, BTreeMap}");
     expect(result[0].kind).toBe("static");
-    expect(result[0].symbols.map((s) => s.name)).toEqual(expect.arrayContaining(["HashMap", "BTreeMap"]));
+    expect(result[0].symbols.map((s) => s.name)).toEqual(["HashMap", "BTreeMap"]);
+  });
+
+  it("does not report intermediate path components as imported symbols", () => {
+    const result = parse("use symphonia::core::audio::{AudioBufferRef, Signal};");
+    expect(result[0].symbols.map((s) => s.name)).toEqual(["AudioBufferRef", "Signal"]);
   });
 
   it("parses use aliases and wildcards", () => {

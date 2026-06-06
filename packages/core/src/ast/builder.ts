@@ -10,24 +10,39 @@ export const DEFAULT_IGNORE = [
 export function buildTree(dirPath: string, options: TreeOptions = {}): RootNode {
   const ignored = new Set(options.ignorePaths ?? DEFAULT_IGNORE);
   const maxDepth = options.depth ?? Infinity;
+  const sourceExtensions = new Set(options.sourceExtensions ?? []);
+  const sourceFileNames = new Set(options.sourceFileNames ?? []);
   const resolved = path.resolve(dirPath);
-  const tree = buildNode(resolved, ignored, 0, maxDepth);
-  if (tree.type !== "directory") {
+  const tree = buildNode(resolved, {
+    ignored,
+    maxDepth,
+    sourceExtensions,
+    sourceFileNames,
+  }, 0);
+  if (!tree || tree.type !== "directory") {
     throw new Error(`Expected directory at ${resolved}, got file`);
   }
   return { type: "root", absolutePath: resolved, tree, externals: [] };
 }
 
-function buildNode(dirPath: string, ignored: Set<string>, currentDepth: number, maxDepth: number): ASTNode {
+interface BuildState {
+  ignored: Set<string>;
+  maxDepth: number;
+  sourceExtensions: Set<string>;
+  sourceFileNames: Set<string>;
+}
+
+function buildNode(dirPath: string, state: BuildState, currentDepth: number): ASTNode | null {
   const name = path.basename(dirPath);
   const stat = fs.statSync(dirPath);
 
   if (!stat.isDirectory()) {
     const ext = path.extname(name);
+    if (!shouldIncludeFile(name, ext, state)) return null;
     return { name, type: "file", extension: ext || null, imports: [], symbols: [] };
   }
 
-  if (currentDepth >= maxDepth) {
+  if (currentDepth >= state.maxDepth && !hasSourceFilter(state)) {
     return { name, type: "directory", children: [] };
   }
 
@@ -35,9 +50,19 @@ function buildNode(dirPath: string, ignored: Set<string>, currentDepth: number, 
   const children: ASTNode[] = [];
 
   for (const entry of entries) {
-    if (ignored.has(entry)) continue;
-    children.push(buildNode(path.join(dirPath, entry), ignored, currentDepth + 1, maxDepth));
+    if (state.ignored.has(entry)) continue;
+    const child = buildNode(path.join(dirPath, entry), state, currentDepth + 1);
+    if (child) children.push(child);
   }
 
   return { name, type: "directory", children };
+}
+
+function shouldIncludeFile(name: string, ext: string, state: BuildState): boolean {
+  if (!hasSourceFilter(state)) return true;
+  return state.sourceExtensions.has(ext) || state.sourceFileNames.has(name);
+}
+
+function hasSourceFilter(state: BuildState): boolean {
+  return state.sourceExtensions.size > 0 || state.sourceFileNames.size > 0;
 }

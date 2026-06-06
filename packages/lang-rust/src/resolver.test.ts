@@ -1,7 +1,7 @@
 import fs from "fs";
 import os from "os";
 import path from "path";
-import { resolveRustImport } from "./resolver";
+import { isRustExternalImport, resolveRustImport, rustExternalPackageName } from "./resolver";
 import type { ResolveContext } from "@grail-ai/core";
 
 let tmpDir: string;
@@ -43,8 +43,54 @@ describe("resolveRustImport", () => {
     expect(resolveRustImport("crate::models::user::User", context("src/lib.rs"))).toBe(path.join(tmpDir, "src/models/user.rs"));
   });
 
+  it("resolves crate-qualified paths from the containing workspace package", () => {
+    writeFile("Cargo.toml", "[workspace]\nmembers = [\"crates/*\"]\n");
+    writeFile("crates/app/Cargo.toml", "[package]\nname = \"demo-app\"\n");
+    writeFile("crates/app/src/convert.rs");
+
+    expect(resolveRustImport("crate::convert::*", context("crates/app/src/render.rs"))).toBe(path.join(tmpDir, "crates/app/src/convert.rs"));
+  });
+
+  it("resolves sibling workspace crates by Rust crate name", () => {
+    writeFile("Cargo.toml", "[workspace]\nmembers = [\"crates/*\"]\n");
+    writeFile("crates/engine/Cargo.toml", "[package]\nname = \"demo-engine\"\n");
+    writeFile("crates/engine/src/lib.rs");
+    writeFile("crates/engine/src/composition.rs");
+    writeFile("crates/app/Cargo.toml", "[package]\nname = \"demo-app\"\n");
+
+    expect(resolveRustImport("demo_engine::{Composition}", context("crates/app/src/app.rs"))).toBe(path.join(tmpDir, "crates/engine/src/lib.rs"));
+    expect(resolveRustImport("demo_engine::composition::mix", context("crates/app/src/app.rs"))).toBe(path.join(tmpDir, "crates/engine/src/composition.rs"));
+  });
+
+  it("resolves aliased sibling workspace crates", () => {
+    writeFile("Cargo.toml", "[workspace]\nmembers = [\"crates/*\"]\n");
+    writeFile("crates/engine/Cargo.toml", "[package]\nname = \"demo-engine\"\n");
+    writeFile("crates/engine/src/lib.rs");
+    writeFile("crates/app/Cargo.toml", "[package]\nname = \"demo-app\"\n");
+
+    expect(resolveRustImport("demo_engine as eng", context("crates/app/src/app.rs"))).toBe(path.join(tmpDir, "crates/engine/src/lib.rs"));
+  });
+
   it("returns null for standard library crates and external crates", () => {
     expect(resolveRustImport("std::collections::HashMap", context("src/lib.rs"))).toBeNull();
     expect(resolveRustImport("serde::Serialize", context("src/lib.rs"))).toBeNull();
+  });
+
+  it("classifies standard and relative Rust imports as non-external", () => {
+    expect(isRustExternalImport("std::collections::HashMap", context("src/lib.rs"))).toBe(false);
+    expect(isRustExternalImport("core::fmt::Debug", context("src/lib.rs"))).toBe(false);
+    expect(isRustExternalImport("super::*", context("src/lib.rs"))).toBe(false);
+    expect(isRustExternalImport("crate::models::User", context("src/lib.rs"))).toBe(false);
+  });
+
+  it("classifies third-party crates as external", () => {
+    expect(isRustExternalImport("serde::Serialize", context("src/lib.rs"))).toBe(true);
+    expect(isRustExternalImport("anyhow::{Context, Result}", context("src/lib.rs"))).toBe(true);
+  });
+
+  it("extracts external Rust crate names", () => {
+    expect(rustExternalPackageName("serde::Serialize")).toBe("serde");
+    expect(rustExternalPackageName("anyhow::{Context, Result}")).toBe("anyhow");
+    expect(rustExternalPackageName("symphonia::core::audio::{AudioBufferRef, Signal}")).toBe("symphonia");
   });
 });

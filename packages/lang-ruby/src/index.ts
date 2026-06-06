@@ -12,6 +12,8 @@ export const ruby: LanguageDescriptor = {
     },
   ],
   treeOptions: {
+    sourceExtensions: [".rb", ".rake", ".gemspec"],
+    sourceFileNames: ["Gemfile", "Rakefile", "config.ru"],
     ignorePaths: [
       "vendor",
       ".bundle",

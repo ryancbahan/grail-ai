@@ -159,11 +159,13 @@ describe("summary command", () => {
     expect(captured.some((c) => typeof c === "string" && c.includes("not found"))).toBe(true);
   });
 
-  it("respects depth flag", async () => {
+  it("uses source-aware depth traversal", async () => {
     await summary.run({ path: tmpDir, depth: 1, transitive: false });
     const result = getOutput();
     const files = result.map((f: any) => f.file);
-    expect(files.every((f: string) => !f.includes("/"))).toBe(true);
+    expect(files).toContain("src/index.ts");
+    expect(files).toContain("src/utils.ts");
+    expect(files).toContain("src/types.ts");
   });
 });
 
@@ -180,10 +182,12 @@ describe("files command", () => {
     expect(result.files).toContain("src/types.ts");
   });
 
-  it("respects depth flag", async () => {
+  it("uses source-aware depth traversal", async () => {
     await files.run({ path: tmpDir, depth: 1, transitive: false });
     const result = getOutput();
-    expect(result.files.every((f: string) => !f.includes("/"))).toBe(true);
+    expect(result.files).toContain("src/index.ts");
+    expect(result.files).toContain("src/utils.ts");
+    expect(result.files).toContain("src/types.ts");
   });
 });
 

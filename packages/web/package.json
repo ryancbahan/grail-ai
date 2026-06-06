@@ -1,6 +1,6 @@
 {
   "name": "@grail-ai/web",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "description": "Grail web visualization",
   "main": "dist/server.js",
   "scripts": {

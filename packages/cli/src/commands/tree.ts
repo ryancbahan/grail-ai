@@ -19,7 +19,11 @@ export const tree: Command = {
   name: "tree",
   run: async (flags) => {
     if (!flags.path) fail("Missing --path argument", "Usage: grail-ai tree --path <dir>");
-    const { root, language } = await analyze(flags.path, { depth: flags.depth, language: flags.language });
+    const { root, language } = await analyze(flags.path, {
+      depth: flags.depth,
+      language: flags.language,
+      sourceAware: false,
+    });
     output({
       root: root.absolutePath,
       language: language?.descriptor.name ?? null,

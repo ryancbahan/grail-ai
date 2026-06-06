@@ -255,4 +255,57 @@ describe("buildTree", () => {
       expect(root.tree.children).toEqual([]);
     });
   });
+
+  describe("source-aware traversal", () => {
+    it("filters non-source files when source extensions are provided", () => {
+      touch(path.join(tmpDir, "src", "index.ts"));
+      touch(path.join(tmpDir, "samples", "kick.wav"));
+      touch(path.join(tmpDir, "patches", "demo.ron"));
+      touch(path.join(tmpDir, "README.md"));
+
+      const root = buildTree(tmpDir, { ignorePaths: [], sourceExtensions: [".ts"] });
+      const src = root.tree.children.find((c) => c.name === "src");
+      const samples = root.tree.children.find((c) => c.name === "samples");
+      const patches = root.tree.children.find((c) => c.name === "patches");
+
+      expect(root.tree.children.map((c) => c.name)).not.toContain("README.md");
+      expect(src?.type).toBe("directory");
+      if (src?.type === "directory") expect(src.children.map((c) => c.name)).toEqual(["index.ts"]);
+      if (samples?.type === "directory") expect(samples.children).toEqual([]);
+      if (patches?.type === "directory") expect(patches.children).toEqual([]);
+    });
+
+    it("continues through shallow depth limits to find source files", () => {
+      touch(path.join(tmpDir, "crates", "app", "src", "lib.rs"));
+      touch(path.join(tmpDir, "crates", "app", "samples", "loop.wav"));
+
+      const root = buildTree(tmpDir, { ignorePaths: [], depth: 2, sourceExtensions: [".rs"] });
+      const crates = root.tree.children.find((c) => c.name === "crates");
+      expect(crates?.type).toBe("directory");
+      if (crates?.type !== "directory") return;
+
+      const app = crates.children.find((c) => c.name === "app");
+      expect(app?.type).toBe("directory");
+      if (app?.type !== "directory") return;
+
+      const src = app.children.find((c) => c.name === "src");
+      expect(src?.type).toBe("directory");
+      if (src?.type !== "directory") return;
+      expect(src.children.map((c) => c.name)).toEqual(["lib.rs"]);
+    });
+
+    it("includes extensionless language files by name", () => {
+      touch(path.join(tmpDir, "Gemfile"));
+      touch(path.join(tmpDir, "Rakefile"));
+      touch(path.join(tmpDir, "README.md"));
+
+      const root = buildTree(tmpDir, {
+        ignorePaths: [],
+        sourceExtensions: [".rb"],
+        sourceFileNames: ["Gemfile", "Rakefile"],
+      });
+
+      expect(root.tree.children.map((c) => c.name)).toEqual(["Gemfile", "Rakefile"]);
+    });
+  });
 });

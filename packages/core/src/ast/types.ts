@@ -11,6 +11,8 @@ export interface Range {
 export interface TreeOptions {
   ignorePaths?: string[];
   depth?: number;
+  sourceExtensions?: string[];
+  sourceFileNames?: string[];
 }
 
 export interface ImportedSymbol {

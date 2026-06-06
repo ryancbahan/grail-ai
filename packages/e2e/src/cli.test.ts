@@ -70,7 +70,6 @@ describe("e2e: summary", () => {
     const result = json(`summary --path ${TS_APP}`);
     const files = result.map((f: any) => f.file).sort();
     expect(files).toEqual([
-      "package.json",
       "src/index.ts",
       "src/service.ts",
       "src/types.ts",
@@ -120,7 +119,6 @@ describe("e2e: files", () => {
   it("returns exact file list", () => {
     const result = json(`files --path ${TS_APP}`);
     expect(result.files.sort()).toEqual([
-      "package.json",
       "src/index.ts",
       "src/service.ts",
       "src/types.ts",
@@ -426,12 +424,14 @@ describe("e2e: internal symbols", () => {
 // ── Depth Flag ──────────────────────────────────────────────────
 
 describe("e2e: depth", () => {
-  it("--depth 1 shows only top-level entries", () => {
+  it("--depth 1 still reaches nested source files for analysis commands", () => {
     const result = json(`summary --path ${TS_APP} --depth 1`);
     const files = result.map((f: any) => f.file);
-    expect(files).toContain("package.json");
-    expect(files.every((f: string) => !f.includes("/"))).toBe(true);
-    expect(files).not.toContain("src/index.ts");
+    expect(files).toContain("src/index.ts");
+    expect(files).toContain("src/service.ts");
+    expect(files).toContain("src/types.ts");
+    expect(files).toContain("src/utils.ts");
+    expect(files).not.toContain("package.json");
   });
 
   it("tree --depth 1 shows directories as empty", () => {

@@ -66,38 +66,75 @@ function extractImportedSymbols(node: Node): ImportedSymbol[] {
     }
   }
 
-  function walk(current: Node) {
-    if (current.type === "use_as_clause") {
-      const alias = current.childForFieldName("alias");
-      const path = current.childForFieldName("path");
-      if (alias && path) {
-        add(alias.text, lastPathSegment(path.text));
-        return;
+  for (const symbol of parseUseSymbols(node.text)) add(symbol.name, symbol.originalName);
+  return symbols;
+}
+
+function parseUseSymbols(text: string): ImportedSymbol[] {
+  const source = text.trim().replace(/;$/, "");
+  const list = topLevelBraceContents(source);
+  if (list) {
+    const [prefix, contents] = list;
+    return splitTopLevel(contents).flatMap((item) => {
+      const trimmed = item.trim();
+      if (!trimmed) return [];
+      if (trimmed === "self") {
+        const name = lastPathSegment(prefix);
+        return name ? [{ name, originalName: name }] : [];
+      }
+      return parseUseSymbols(`${prefix}::${trimmed}`);
+    });
+  }
+
+  if (source.endsWith("::*")) return [{ name: "*", originalName: "*" }];
+
+  const alias = source.match(/\s+as\s+([A-Za-z_][A-Za-z0-9_]*)$/);
+  if (alias) {
+    const pathText = source.slice(0, alias.index).trim();
+    const originalName = lastPathSegment(pathText);
+    return originalName ? [{ name: alias[1], originalName }] : [];
+  }
+
+  const name = lastPathSegment(source);
+  return name ? [{ name, originalName: name }] : [];
+}
+
+function topLevelBraceContents(text: string): [string, string] | null {
+  let depth = 0;
+  let start = -1;
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    if (char === "{") {
+      if (depth === 0) start = i;
+      depth++;
+    } else if (char === "}") {
+      depth--;
+      if (depth === 0 && start !== -1) {
+        const prefix = text.slice(0, start).replace(/::$/, "").trim();
+        return [prefix, text.slice(start + 1, i)];
       }
     }
+  }
+  return null;
+}
 
-    if (current.type === "use_wildcard") {
-      add("*", "*");
-      return;
-    }
+function splitTopLevel(text: string): string[] {
+  const parts: string[] = [];
+  let depth = 0;
+  let start = 0;
 
-    if (current.type === "identifier" || current.type === "type_identifier") {
-      add(current.text);
-    }
-
-    if (current.type === "scoped_identifier") {
-      const name = current.childForFieldName("name");
-      if (name) add(name.text);
-    }
-
-    for (let i = 0; i < current.namedChildCount; i++) {
-      const child = current.namedChild(i);
-      if (child) walk(child);
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    if (char === "{") depth++;
+    else if (char === "}") depth--;
+    else if (char === "," && depth === 0) {
+      parts.push(text.slice(start, i));
+      start = i + 1;
     }
   }
 
-  walk(node);
-  return symbols;
+  parts.push(text.slice(start));
+  return parts;
 }
 
 function lastPathSegment(text: string): string {

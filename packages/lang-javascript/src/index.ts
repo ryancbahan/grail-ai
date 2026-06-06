@@ -12,6 +12,7 @@ export const javascript: LanguageDescriptor = {
     { extensions: [".tsx"], grammarPackage: "tree-sitter-typescript", wasmFile: "tree-sitter-tsx.wasm" },
   ],
   treeOptions: {
+    sourceExtensions: [".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs", ".mts", ".cts"],
     ignorePaths: [
       "node_modules",
       ".git",

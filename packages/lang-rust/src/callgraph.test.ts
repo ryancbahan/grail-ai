@@ -87,6 +87,52 @@ impl Store {
     expect(run!.calls![0].file).toContain("service.rs");
   });
 
+  it("resolves module-scoped calls inside workspace packages", async () => {
+    writeFile("Cargo.toml", "[workspace]\nmembers = [\"crates/*\"]\n");
+    writeFile("crates/app/Cargo.toml", "[package]\nname = \"demo-app\"\n");
+    writeFile("crates/app/src/lib.rs", "mod service;\npub fn run() { service::fetch(); }\n");
+    writeFile("crates/app/src/service.rs", "pub fn fetch() {}\n");
+
+    const root = await analyzeAndBuildCallGraph();
+    const run = findSymbol(root, "crates/app/src/lib.rs", "run");
+    expect(run!.calls).toHaveLength(1);
+    expect(run!.calls![0].name).toBe("fetch");
+    expect(run!.calls![0].file).toContain("service.rs");
+  });
+
+  it("resolves sibling workspace crate calls", async () => {
+    writeFile("Cargo.toml", "[workspace]\nmembers = [\"crates/*\"]\n");
+    writeFile("crates/engine/Cargo.toml", "[package]\nname = \"demo-engine\"\n");
+    writeFile("crates/engine/src/lib.rs", "pub fn mix() {}\n");
+    writeFile("crates/app/Cargo.toml", "[package]\nname = \"demo-app\"\n");
+    writeFile("crates/app/src/lib.rs", "pub fn run() { demo_engine::mix(); }\n");
+
+    const root = await analyzeAndBuildCallGraph();
+    const run = findSymbol(root, "crates/app/src/lib.rs", "run");
+    expect(run!.calls).toHaveLength(1);
+    expect(run!.calls![0].name).toBe("mix");
+    expect(run!.calls![0].file).toContain("engine");
+  });
+
+  it("does not resolve arbitrary value method calls without type information", async () => {
+    writeFile("Cargo.toml", "[package]\nname = \"demo\"\n");
+    writeFile("src/lib.rs", `
+pub struct Registry;
+
+impl Registry {
+  pub fn get(&self, name: &str) -> Option<&str> { Some(name) }
+}
+
+pub fn run(parts: Vec<&str>) {
+  parts.get(1);
+}
+`);
+
+    const root = await analyzeAndBuildCallGraph();
+    const run = findSymbol(root, "lib.rs", "run");
+    expect(run!.calls).toEqual([]);
+  });
+
   it("resolves local macro definitions and ignores std macros", async () => {
     writeFile("Cargo.toml", "[package]\nname = \"demo\"\n");
     writeFile("src/lib.rs", "macro_rules! route { () => {} }\npub fn run() { route!(); println!(\"hi\"); }\n");

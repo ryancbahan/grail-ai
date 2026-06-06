@@ -3,6 +3,7 @@ import path from "path";
 import type { Node, Tree } from "web-tree-sitter";
 import type { FileEntry, Range, SymbolRef } from "@grail-ai/core";
 import { parseFile } from "@grail-ai/core";
+import { modulePathForFile, packageForFile } from "./cargo";
 
 interface Scope {
   name: string;
@@ -48,7 +49,6 @@ export async function buildRustCallGraph(
     const tree = parseFile(filePath, content) as Tree;
     if (!tree) continue;
 
-    const rel = path.relative(projectRoot, filePath);
     const functions = findFunctions(tree.rootNode);
 
     for (const fn of functions) {
@@ -62,7 +62,7 @@ export async function buildRustCallGraph(
       const body = fn.node.childForFieldName("body");
       if (!body) continue;
 
-      sym.calls = collectCalls(body, rel, fn, symbolIndex);
+      sym.calls = collectCalls(body, filePath, fn, symbolIndex);
     }
 
     if (typeof (tree as { delete?: () => void }).delete === "function") {
@@ -79,7 +79,8 @@ function buildSymbolIndex(files: FileEntry[], projectRoot: string) {
   for (const { filePath, node } of files) {
     if (!RUST_EXTENSIONS.has(path.extname(filePath))) continue;
     const rel = path.relative(projectRoot, filePath);
-    const modulePath = moduleNameFromFile(rel);
+    const modulePath = modulePathForFile(filePath, projectRoot);
+    const crateName = packageForFile(filePath, projectRoot).crateName;
 
     for (const sym of node.symbols) {
       const def: SymbolDef = {
@@ -94,10 +95,12 @@ function buildSymbolIndex(files: FileEntry[], projectRoot: string) {
       push(byName, sym.name, def);
       if (sym.parent) push(byParentAndName, `${sym.parent}.${sym.name}`, def);
       if (modulePath) push(byModulePathAndName, `${modulePath}.${sym.name}`, def);
+      push(byModulePathAndName, `${crateName}.${sym.name}`, def);
+      if (modulePath) push(byModulePathAndName, `${crateName}::${modulePath}.${sym.name}`, def);
     }
   }
 
-  return { byName, byParentAndName, byModulePathAndName };
+  return { byName, byParentAndName, byModulePathAndName, projectRoot };
 }
 
 function findFunctions(root: Node): FunctionNode[] {
@@ -208,7 +211,7 @@ function resolveCallNode(
     if (value?.text === "self" && currentFunction.parent) {
       return defToRef(first(index.byParentAndName.get(`${currentFunction.parent}.${field.text}`)), node);
     }
-    return defToRef(unique(index.byName.get(field.text)), node);
+    return null;
   }
 
   if (fn.type === "scoped_identifier") {
@@ -242,7 +245,7 @@ function resolveSameModule(
     if (parentHit) return defToRef(parentHit, callNode);
   }
 
-  const modulePath = moduleNameFromFile(currentFile);
+  const modulePath = modulePathForFile(currentFile, index.projectRoot);
   if (modulePath) {
     const moduleHit = first(index.byModulePathAndName.get(`${modulePath}.${name}`));
     if (moduleHit) return defToRef(moduleHit, callNode);
@@ -282,16 +285,6 @@ function walk(node: Node, visit: (node: Node) => void): void {
 
 function pathParts(text: string): string[] {
   return text.split("::").map((part) => part.trim()).filter(Boolean);
-}
-
-function moduleNameFromFile(relPath: string): string | undefined {
-  const withoutExt = relPath.replace(/\.rs$/, "");
-  const parts = withoutExt.split(path.sep).filter(Boolean);
-  if (parts[0] === "src") parts.shift();
-  if (parts[parts.length - 1] === "mod" || parts[parts.length - 1] === "lib" || parts[parts.length - 1] === "main") {
-    parts.pop();
-  }
-  return parts.length > 0 ? parts.join("::") : undefined;
 }
 
 function qualify(scope: Scope | undefined, name: string): string {
