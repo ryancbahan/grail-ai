@@ -20,6 +20,7 @@ jobs:
       - run: npm install
       - run: npm run build -w packages/core
       - run: npm run build -w packages/lang-javascript
+      - run: npm run build -w packages/lang-ruby
       - run: npm run build -w packages/cli
       - run: npm run build -w packages/web
       - run: npm run build -w packages/mcp
@@ -45,6 +46,9 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - run: npm publish -w packages/lang-javascript --access public --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - run: npm publish -w packages/lang-ruby --access public --provenance
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - run: npm publish -w packages/cli --access public --provenance

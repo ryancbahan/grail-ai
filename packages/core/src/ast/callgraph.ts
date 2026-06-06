@@ -78,7 +78,12 @@ export function callsOf(
   const maxDepth = options.maxDepth ?? Infinity;
   const visited = new Set<string>();
   const result: SymbolRef[] = [];
-  const startKey = symKey({ file: path.relative(rootPath, absPath), name: symbolName });
+  const startKey = symKey({
+    file: path.relative(rootPath, absPath),
+    name: symbol.name,
+    parent: symbol.parent,
+    kind: symbol.kind,
+  });
   visited.add(startKey);
 
   let frontier = symbol.calls.map((c) => ({ ref: c, depth: 1 }));
@@ -86,21 +91,21 @@ export function callsOf(
   while (frontier.length > 0) {
     const next: typeof frontier = [];
     for (const { ref, depth } of frontier) {
-      const key = symKey(ref);
+      const enriched = enrichCall(ref, files, rootPath);
+      const key = symKey(enriched);
       if (visited.has(key)) continue;
       visited.add(key);
 
-      const enriched = enrichCall(ref, files, rootPath);
       result.push(enriched);
 
       if (depth < maxDepth) {
         const targetFile = files.find((f) =>
-          path.relative(rootPath, f.filePath) === ref.file
+          path.relative(rootPath, f.filePath) === enriched.file
         );
         const targetSym = targetFile?.node.symbols.find(
-          (s) => s.name === ref.name &&
-            s.parent === ref.parent &&
-            (ref.kind === undefined || s.kind === ref.kind)
+          (s) => s.name === enriched.name &&
+            s.parent === enriched.parent &&
+            (enriched.kind === undefined || s.kind === enriched.kind)
         );
         if (targetSym?.calls) {
           for (const subcall of targetSym.calls) {
@@ -157,7 +162,14 @@ export function callersOf(
   const maxDepth = options.maxDepth ?? Infinity;
   const visited = new Set<string>();
   const result: SymbolRef[] = [];
-  visited.add(`${rel}:${symbolName}`);
+  const targetFile = files.find((f) => f.filePath === absPath);
+  const targetSymbol = targetFile ? pickSymbol(targetFile.node.symbols, symbolName, options.parent) : undefined;
+  visited.add(symKey({
+    file: rel,
+    name: targetSymbol?.name ?? symbolName,
+    parent: targetSymbol?.parent ?? options.parent,
+    kind: targetSymbol?.kind,
+  }));
 
   let frontier = directCallers(rel, symbolName, options.parent).map((c) => ({ ref: c, depth: 1 }));
 
